@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
 
 from tasker.resources import resource_path
 from tasker.shell.detail import DetailWindow, detail_geometry
+from tasker.shell.taskbar import apply_taskbar_icon
 from tasker.store import Item, Store
 from tasker.theme import (
     CHROME,
@@ -57,20 +58,16 @@ class ItemCard(QWidget):
         self.done.toggled.connect(self._toggle_done)
         layout.addWidget(self.color_bar)
         layout.addWidget(self.title, 1)
+        self.open_btn = QToolButton()
+        self.open_btn.setText("详情")
+        self.open_btn.setToolTip("打开详情，写最新状态和正文")
+        self.open_btn.clicked.connect(lambda: self._on_open(self.item_id))
+        layout.addWidget(self.open_btn)
         layout.addWidget(self.done)
         self.apply_item(item)
-        self.title.installEventFilter(self)
-
-    def eventFilter(self, watched, event):
-        from PySide6.QtCore import QEvent
-
-        if watched is self.title and event.type() == QEvent.Type.FocusIn:
-            self._on_open(self.item_id)
-        return super().eventFilter(watched, event)
-
-    def mousePressEvent(self, event) -> None:
+    def mouseDoubleClickEvent(self, event) -> None:
         self._on_open(self.item_id)
-        super().mousePressEvent(event)
+        super().mouseDoubleClickEvent(event)
 
     def apply_item(self, item: Item) -> None:
         self.setStyleSheet(
@@ -86,7 +83,6 @@ class ItemCard(QWidget):
     def _cycle(self) -> None:
         item = self._store.cycle_color(self.item_id)
         self.apply_item(item)
-        self._on_open(self.item_id)
 
     def _toggle_done(self, checked: bool) -> None:
         item = self._store.set_done(self.item_id, checked)
@@ -123,9 +119,12 @@ class DockWindow(QWidget):
         self.search.setPlaceholderText("查找…")
         self.search.textChanged.connect(self.refresh)
         self.add_btn = QPushButton("+")
+        self.add_btn.setFixedWidth(36)
+        self.add_btn.setToolTip("新建事项")
         self.add_btn.clicked.connect(self._add)
         self.pin_btn = QToolButton()
         self.pin_btn.setText("钉")
+        self.pin_btn.setToolTip("钉在其它窗口上面")
         self.pin_btn.setCheckable(True)
         self.pin_btn.toggled.connect(self._toggle_pin)
         header.addWidget(label)
@@ -146,6 +145,15 @@ class DockWindow(QWidget):
         root.addWidget(scroll, 1)
         self._place()
         self.refresh()
+        self._icon_path = resource_path("assets", "icons", "tasker.ico")
+
+    def showEvent(self, event) -> None:
+        super().showEvent(event)
+        self._apply_taskbar()
+
+    def _apply_taskbar(self) -> None:
+        hwnd = int(self.winId())
+        apply_taskbar_icon(hwnd, self._icon_path)
 
     def _place(self) -> None:
         screen = QGuiApplication.primaryScreen()
@@ -159,12 +167,12 @@ class DockWindow(QWidget):
         else:
             self.setWindowFlags(flags & ~Qt.WindowType.WindowStaysOnTopHint)
         self.show()
+        self._apply_taskbar()
 
     def _add(self) -> None:
         item = self._store.create()
         self.refresh()
         self._focus_card(item.id)
-        self.open_detail(item.id)
 
     def _focus_card(self, item_id: str) -> None:
         for i in range(self.list_layout.count()):
@@ -187,7 +195,8 @@ class DockWindow(QWidget):
         if item is None:
             return
         if self._detail is None:
-            self._detail = DetailWindow(self._store)
+            self._detail = DetailWindow(self._store, parent=self)
+            self._detail.closed.connect(self.refresh)
         self._detail.load(item)
         screen = QGuiApplication.primaryScreen()
         avail = screen.availableGeometry() if screen else QRect(0, 0, 1920, 1080)

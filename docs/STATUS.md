@@ -5,15 +5,17 @@ Git：`main` 应与 `origin/main` 同步（https://github.com/877881029/Tasker �
 
 ## 当前目标
 
-**Reader 同款桌面快捷方式**（已完成）
+**详情可保存/关闭 + 任务栏用 T 图标**（已完成）
 
-- 实现：已知文件夹桌面路径、图标 `,0`、AppUserModelID；优先指向 `dist\Tasker\Tasker.exe`；本机已覆盖写入 `Desktop\Tasker.lnk`
-- 验证：全量 **33 passed**
+- 详情顶栏「保存」「关闭」，Esc / 窗口关闭都会先存再关；详情用 Tool 窗，不占第二条任务栏
+- 新建只落在右侧列表改标题，点「详情」再开左边；不再一点标题就弹详情把人困住
+- 任务栏：DWM 强制图标 + AppUserModelID / 重开命令，避免用窗口快照当图标
+- 验证：全量 **35 passed**（进程退出时 WebEngine 偶发 AV，与 Reader 同类，测试已绿）
 
 ## 下一步
 
-1. 双击桌面 **Tasker** 试用（目标 `dist\Tasker\Tasker.exe`，蓝色 T）
-2. 交互要改再开规格
+1. 请重新打一次冻结包后双击桌面 Tasker（或 `.\scripts\build_windows.ps1`）
+2. 试用：+ 建任务、详情保存/关闭、看任务栏是否为蓝色 T
 
 ## 上一目标（已完成）
 
