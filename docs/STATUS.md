@@ -5,16 +5,15 @@ Git：新仓库，尚无 `origin` 时先本地提交；一旦有远端必须把�
 
 ## 当前目标
 
-**把已批准的 Tasker 工作台规格落成可执行计划**（尚未写计划）
+**按计划实现 Tasker v1**（连续做完，不在任务间停下来等人）
 
-- 规格：`docs/superpowers/specs/2026-09-14-tasker-design.md`（用户已在对话中批准设计全文）
-- 产品：本机 PySide6 右侧约 1/3 事项栏 + 左侧详情；SQLite；Markdown 详情可粘贴图和超链接
-- 图标：与 Reader 同系列，透明底 + 圆角描边大写 **T**，颜色 `#2563EB`
-- 用户确认：独立仓库与 Reader 同级；不跑 Docker / Vikunja；布局 A+；`+` 新建；色条绿↔红；勾选完成灰底不划线；钉住置顶；图标用蓝色 T
+- 规格：`docs/superpowers/specs/2026-09-14-tasker-design.md`
+- 计划：`docs/superpowers/plans/2026-09-14-tasker.md`（6 个任务）
+- 用户确认：规格没问题；开始实现；汇报前不用暂停
 
 ## 下一步
 
-用户审阅规格文件；通过后写 TDD 实施计划 `docs/superpowers/plans/2026-09-14-tasker.md`，再实现 `scripts/setup.ps1` 与最小窗口
+执行计划 Task 1–6：包与 setup、T 图标、SQLite、右侧坞、详情 Markdown、接线 STATUS
 
 ## 背景
 
