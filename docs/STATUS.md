@@ -1,7 +1,7 @@
 # Tasker 项目状态（AI 接手必读）
 
 最后更新：2026-09-14  
-Git：本地 `main` 已有 v1 实现提交；尚无可用 `origin`。
+Git：`main` 应与 `origin/main` 同步（https://github.com/877881029/Tasker ）。
 
 ## 当前目标
 
@@ -15,8 +15,7 @@ Git：本地 `main` 已有 v1 实现提交；尚无可用 `origin`。
 ## 下一步
 
 1. 在仓库根执行 `.\scripts\setup.ps1`（或已有 venv 则 `.\.venv\Scripts\python.exe -m tasker`）试用
-2. 在允许建库的账号下创建 GitHub `Tasker` 远程并 `git push -u origin main`
-3. 需要冻结构建 `Tasker.exe` 时再开规格
+2. 需要冻结构建 `Tasker.exe` 时再开规格
 
 ## 背景
 
@@ -27,7 +26,8 @@ Tasker 是 Windows 桌面个人工作台。第一版扁平事项列表（待办�
 - 2026-09-14：产品设计定稿并写入规格
 - 2026-09-14：规格补图标——Reader 同款钴蓝色圆角 **T**
 - 2026-09-14：计划 Task 1–6 落地；pytest 21 passed
+- 2026-09-14：远程与 Reader 同账号：https://github.com/877881029/Tasker
 
 ## 阻塞项
 
-- 尚无 `origin`。本机 `gh repo create Tasker --private` 失败：`Repository creation using enterprise-managed user account inside this enterprise is not allowed.`
+- 无
