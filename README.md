@@ -22,6 +22,8 @@
 .\scripts\setup.ps1 -SkipLaunch
 ```
 
+启动后会按 Reader 同款规则刷新桌面 `Tasker.lnk`（已知桌面文件夹、钴蓝色 T 图标、AppUserModelID）。有 `dist\Tasker\Tasker.exe` 时快捷方式指向它。
+
 数据目录：`%LOCALAPPDATA%\Tasker\`。测试时设 `TASKER_DATA_DIR`。不要创建桌面快捷方式时设 `TASKER_SKIP_SHELL_INTEGRATION=1`。
 
 详情：`Ctrl+I` 编辑 Markdown，`Ctrl+T` 回到视觉预览（会先保存正文）。

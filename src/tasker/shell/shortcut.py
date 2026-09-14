@@ -1,10 +1,89 @@
 from __future__ import annotations
 
-from pathlib import Path
+import ctypes
+import os
+import re
 import subprocess
-from typing import Callable
+from collections.abc import Callable
+from pathlib import Path
+from uuid import UUID
 
 from tasker.identity import APP_USER_MODEL_ID
+
+_ICON_INDEX_RE = re.compile(r'^(?:"(?P<quoted>.*)"|(?P<plain>.*)),(?P<index>-?\d+)$')
+
+
+def _icon_location(value: str) -> str:
+    match = _ICON_INDEX_RE.fullmatch(value)
+    if match is None:
+        path = value
+        index = "0"
+    else:
+        path = match.group("quoted") or match.group("plain")
+        index = match.group("index")
+    formatted_path = f'"{path}"' if any(char.isspace() for char in path) else path
+    return f"{formatted_path},{index}"
+
+
+def _desktop_known_location() -> Path | None:
+    if os.name != "nt":
+        return None
+
+    class GUID(ctypes.Structure):
+        _fields_ = [
+            ("Data1", ctypes.c_uint32),
+            ("Data2", ctypes.c_uint16),
+            ("Data3", ctypes.c_uint16),
+            ("Data4", ctypes.c_ubyte * 8),
+        ]
+
+    folder_id = UUID("B4BFCC3A-DB2C-424C-B029-7FE99A87C641")
+    guid = GUID(
+        folder_id.time_low,
+        folder_id.time_mid,
+        folder_id.time_hi_version,
+        (ctypes.c_ubyte * 8)(*folder_id.bytes[8:]),
+    )
+    path_ptr = ctypes.c_wchar_p()
+    result = ctypes.windll.shell32.SHGetKnownFolderPath(
+        ctypes.byref(guid),
+        0,
+        None,
+        ctypes.byref(path_ptr),
+    )
+    if result != 0 or not path_ptr.value:
+        return None
+    try:
+        return Path(path_ptr.value)
+    finally:
+        ctypes.windll.ole32.CoTaskMemFree(path_ptr)
+
+
+def _desktop_path() -> Path:
+    known = _desktop_known_location()
+    if known is not None:
+        return known
+    user_profile = os.environ.get("USERPROFILE")
+    if user_profile:
+        return Path(user_profile) / "Desktop"
+    return Path.home() / "Desktop"
+
+
+def _set_shortcut_app_id(shortcut_path: Path, app_id: str) -> None:
+    if os.name != "nt" or not shortcut_path.exists():
+        return
+    try:
+        import pythoncom
+        from win32com.propsys import propsys, pscon
+    except ImportError:
+        return
+    try:
+        pythoncom.CoInitialize()
+        store = propsys.SHGetPropertyStoreFromParsingName(str(shortcut_path))
+        store.SetValue(pscon.PKEY_AppUserModel_ID, propsys.PROPVARIANTType(app_id))
+        store.Commit()
+    except Exception:
+        return
 
 
 def create_desktop_shortcut(
@@ -17,13 +96,12 @@ def create_desktop_shortcut(
     overwrite: bool = False,
     app_id_setter: Callable[[Path, str], None] | None = None,
 ) -> Path:
-    from pathlib import Path as P
-
-    desktop = P.home() / "Desktop"
+    desktop = _desktop_path()
     desktop.mkdir(parents=True, exist_ok=True)
     shortcut_path = desktop / f"{name}.lnk"
     if shortcut_path.exists() and not overwrite:
         return shortcut_path
+
     if winshell_or_com is None:
         import win32com.client as winshell_or_com
 
@@ -31,11 +109,14 @@ def create_desktop_shortcut(
     shortcut = shell.CreateShortCut(str(shortcut_path))
     shortcut.Targetpath = exe
     shortcut.Arguments = subprocess.list2cmdline(list(args)) if args else ""
-    shortcut.WorkingDirectory = str(P(exe).parent)
+    shortcut.WorkingDirectory = str(Path(exe).parent)
     shortcut.Description = name
-    shortcut.IconLocation = icon or exe
+    shortcut.IconLocation = _icon_location(icon or exe)
     save = getattr(shortcut, "Save", None) or getattr(shortcut, "save")
     save()
-    if app_id_setter is not None:
-        app_id_setter(shortcut_path, APP_USER_MODEL_ID)
+    setter = app_id_setter if app_id_setter is not None else _set_shortcut_app_id
+    try:
+        setter(shortcut_path, APP_USER_MODEL_ID)
+    except Exception:
+        pass
     return shortcut_path

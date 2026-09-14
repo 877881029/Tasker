@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import sys
+from pathlib import Path
 
 from PySide6.QtCore import QTimer, Qt
 from PySide6.QtWidgets import QApplication
@@ -10,15 +11,24 @@ from tasker.app import TaskerApp, set_app_user_model_id
 from tasker.resources import resource_path
 
 
-def _shell_integration_disabled() -> bool:
-    value = os.environ.get("TASKER_SKIP_SHELL_INTEGRATION", "")
-    return value.strip().lower() in {"1", "true", "yes", "on"}
+def frozen_exe_path() -> Path:
+    if getattr(sys, "frozen", False):
+        return Path(sys.executable)
+    return Path(__file__).resolve().parents[2] / "dist" / "Tasker" / "Tasker.exe"
 
 
 def _launch_target() -> tuple[str, tuple[str, ...]]:
     if getattr(sys, "frozen", False):
         return sys.executable, ()
+    frozen = frozen_exe_path()
+    if frozen.is_file():
+        return str(frozen), ()
     return sys.executable, ("-m", "tasker")
+
+
+def _shell_integration_disabled() -> bool:
+    value = os.environ.get("TASKER_SKIP_SHELL_INTEGRATION", "")
+    return value.strip().lower() in {"1", "true", "yes", "on"}
 
 
 def _install_shell_integration(app: TaskerApp) -> None:
