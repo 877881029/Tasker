@@ -14,7 +14,7 @@ Git：`main` 应与 `origin/main` 同步（https://github.com/877881029/Tasker �
 
 ## 下一步
 
-1. 请重新打一次冻结包后双击桌面 Tasker（或 `.\scripts\build_windows.ps1`）
+1. 关闭正在跑的旧 Tasker，再双击桌面快捷方式（已指向刚打好的 `dist\Tasker\Tasker.exe`）
 2. 试用：+ 建任务、详情保存/关闭、看任务栏是否为蓝色 T
 
 ## 上一目标（已完成）
@@ -30,6 +30,8 @@ Tasker 是 Windows 桌面个人工作台。数据 `%LOCALAPPDATA%\Tasker\`。远
 - v1 功能与图标
 - 冻结构建脚本与包装测试 25 passed
 - 2026-09-14：Reader 同款桌面 `Tasker.lnk`，指向冻结 exe
+- 2026-09-14：详情保存/关闭；任务栏强制 T 图标
+- 2026-09-14：冻结包已按上述 UX 重建（`dist\Tasker\Tasker.exe`）
 
 ## 阻塞项
 
