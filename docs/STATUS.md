@@ -27,4 +27,4 @@ Tasker 是 Windows 桌面个人工作台。第一版只有扁平事项列表（�
 
 ## 阻塞项
 
-- 尚无 `origin`。需要 GitHub 远程（账号下与 Reader 同级的 `Tasker` 库）之后，未推送的提交才算同步完成。
+- 尚无 `origin`。本机 `gh repo create Tasker --private` 失败：`Repository creation using enterprise-managed user account inside this enterprise is not allowed.` 需要在允许建库的账号/组织下建空库，再 `git remote add origin` 并推送 `main`。
