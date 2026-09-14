@@ -21,6 +21,16 @@ Later Tasker may be embedded into Reader. First ship is a sibling repo with the 
 - Title-bar **pin**: pinned = always-on-top; unpinned = normal z-order.
 - Clicking an item opens **detail on the left** (over the remaining desktop area), not a second column inside the dock.
 
+### 2.2 Icon
+
+Same family as Reader’s blue **R**: a **transparent** square, one **uppercase letter** drawn with rounded cobalt strokes, not a filled badge or a different hue.
+
+- Letter: **T** (Tasker).
+- Stroke color: Reader cobalt `#2563EB` (same as `assets/icons/reader-r.svg`).
+- Construction: transparent 256×256 field; stroke-width 34; `stroke-linecap` / `stroke-linejoin` round — match Reader’s ribbon-R, not a serif print T and not a boxed tile.
+- Master: `assets/icons/tasker-t.svg`. Raster: PNG 16 / 24 / 32 / 48 / 256 plus multi-size `assets/icons/tasker.ico`.
+- Use `tasker.ico` for the window icon, taskbar, desktop shortcut, and later frozen `Tasker.exe` `--icon`. Do not snapshot the live window as the taskbar glyph.
+
 ### 2.2 Dock (right)
 
 Top row, left to right: **事项** label, **search field**, **`+`**, **pin**.
@@ -51,6 +61,7 @@ Default list order: urgent first, then pending, then done; within a group, newes
 | Store | SQLite under `%LOCALAPPDATA%\Tasker\` (tests use `TASKER_DATA_DIR`) |
 | Body | Markdown on disk/db + Reader-style `MarkdownVisualView` / text edit |
 | Images | Files in `%LOCALAPPDATA%\Tasker\attachments\<item-id>\` |
+| Icons | `assets/icons/tasker-t.svg` + generated PNG/`tasker.ico` (Reader pipeline) |
 | Not in v1 | Vikunja binary, HTTP server for others, accounts, Docker, Office/PPTX/PDF |
 
 Main window owns the dock list and search. Selecting an id opens a detail widget that loads Markdown for that item. Saving writes SQLite + attachment files. Pin only toggles `WindowStaysOnTopHint`.
@@ -86,6 +97,7 @@ No separate project table in v1: one flat list is the workbench.
 - Paste image: a file exists under attachments and `body_md` contains an image reference to it.
 - Markdown visual opens links without leaving the app for `http(s)` (external browser or in-pane policy: **open in the system browser**; do not fetch remote images in the visual preview).
 - Tests must not write to the real `%LOCALAPPDATA%\Tasker` (always `TASKER_DATA_DIR`).
+- Icon assets exist (`tasker-t.svg`, size PNGs, `tasker.ico`). Corner pixels are transparent; a stroke sample is cobalt `#2563EB` (blue channel dominant, same checks as Reader `tests/test_icon_assets.py`). Window and shortcut load `tasker.ico`, not `reader.ico`.
 
 ## 6. Handoff and deploy
 
@@ -106,3 +118,4 @@ Same loop as Reader:
 - Pin control for always-on-top.
 - Details reuse Reader Markdown stack, with paste image + hyperlinks required.
 - Working title of the product: **Tasker**.
+- App icon is a same-series cobalt rounded **T** on a transparent field (`#2563EB`), parallel to Reader’s **R**.

@@ -1,6 +1,6 @@
 # Tasker
 
-本机 Windows 工作台：屏幕右侧约三分之一列出当前事项，点开后在左侧编辑详情（Markdown、粘贴图片、超链接）。不使用 Docker，不运行 Vikunja。
+本机 Windows 工作台：屏幕右侧约三分之一列出当前事项，点开后在左侧编辑详情（Markdown、粘贴图片、超链接）。图标是与 Reader 同系列的钴蓝色大写 **T**。不使用 Docker，不运行 Vikunja。
 
 ## 当前状态
 
