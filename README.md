@@ -10,11 +10,16 @@
 .\scripts\setup.ps1
 ```
 
-创建 `.venv`、安装依赖并启动。只要装环境、不要弹窗：
+会装依赖、打出 `dist\Tasker\Tasker.exe` 并启动。只要源码、不要冻结构建：
+
+```powershell
+.\scripts\setup.ps1 -SkipBuild
+```
+
+只要装环境、不要弹窗：
 
 ```powershell
 .\scripts\setup.ps1 -SkipLaunch
-.\.venv\Scripts\python.exe -m tasker
 ```
 
 数据目录：`%LOCALAPPDATA%\Tasker\`。测试时设 `TASKER_DATA_DIR`。不要创建桌面快捷方式时设 `TASKER_SKIP_SHELL_INTEGRATION=1`。

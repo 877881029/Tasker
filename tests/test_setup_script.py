@@ -9,4 +9,5 @@ def test_setup_ps1_installs_editable_and_launches_module():
     assert "-m tasker" in text
     assert "docker" not in text.lower()
     assert "vikunja" not in text.lower()
-    assert "build_windows" not in text
+    assert "build_windows.ps1" in text
+    assert "SkipBuild" in text

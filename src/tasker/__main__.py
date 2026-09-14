@@ -15,10 +15,16 @@ def _shell_integration_disabled() -> bool:
     return value.strip().lower() in {"1", "true", "yes", "on"}
 
 
+def _launch_target() -> tuple[str, tuple[str, ...]]:
+    if getattr(sys, "frozen", False):
+        return sys.executable, ()
+    return sys.executable, ("-m", "tasker")
+
+
 def _install_shell_integration(app: TaskerApp) -> None:
     from tasker.shell.shortcut import create_desktop_shortcut
 
-    exe, args = sys.executable, ("-m", "tasker")
+    exe, args = _launch_target()
     try:
         create_desktop_shortcut(
             exe,
