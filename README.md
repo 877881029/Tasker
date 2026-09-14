@@ -2,22 +2,28 @@
 
 本机 Windows 工作台：屏幕右侧约三分之一列出当前事项，点开后在左侧编辑详情（Markdown、粘贴图片、超链接）。图标是与 Reader 同系列的钴蓝色大写 **T**。不使用 Docker，不运行 Vikunja。
 
-## 当前状态
+## 怎么跑
 
-规格已定：`docs/superpowers/specs/2026-09-14-tasker-design.md`。活进度在 `docs/STATUS.md`。源码与 `scripts/setup.ps1` 尚未落地。
-
-## 以后怎么跑
-
-实现第一刀之后，clone 本仓库，在仓库根执行：
+需要 Python 3.12+。在仓库根：
 
 ```powershell
 .\scripts\setup.ps1
 ```
 
-会创建 `.venv`、安装依赖并启动 Tasker。只要源码、不要自动启动时再加开关（与 Reader 相同思路）。
+创建 `.venv`、安装依赖并启动。只要装环境、不要弹窗：
+
+```powershell
+.\scripts\setup.ps1 -SkipLaunch
+.\.venv\Scripts\python.exe -m tasker
+```
+
+数据目录：`%LOCALAPPDATA%\Tasker\`。测试时设 `TASKER_DATA_DIR`。不要创建桌面快捷方式时设 `TASKER_SKIP_SHELL_INTEGRATION=1`。
+
+详情：`Ctrl+I` 编辑 Markdown，`Ctrl+T` 回到视觉预览（会先保存正文）。
 
 ## 给接手的人 / Agent
 
 1. `docs/STATUS.md`
 2. `docs/superpowers/process.md`
-3. 当前规格与（若已有）`docs/superpowers/plans/`
+3. `docs/superpowers/specs/2026-09-14-tasker-design.md`
+4. `docs/superpowers/plans/2026-09-14-tasker.md`

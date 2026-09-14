@@ -31,7 +31,7 @@ Same family as Reader’s blue **R**: a **transparent** square, one **uppercase 
 - Master: `assets/icons/tasker-t.svg`. Raster: PNG 16 / 24 / 32 / 48 / 256 plus multi-size `assets/icons/tasker.ico`.
 - Use `tasker.ico` for the window icon, taskbar, desktop shortcut, and later frozen `Tasker.exe` `--icon`. Do not snapshot the live window as the taskbar glyph.
 
-### 2.2 Dock (right)
+### 2.3 Dock (right)
 
 Top row, left to right: **事项** label, **search field**, **`+`**, **pin**.
 
@@ -43,7 +43,7 @@ Top row, left to right: **事项** label, **search field**, **`+`**, **pin**.
 
 Default list order: urgent first, then pending, then done; within a group, newest-updated first. Search results keep that order among matches.
 
-### 2.3 Detail (left)
+### 2.4 Detail (left)
 
 - Editable **title** (same string as the dock card).
 - **Pinned latest-status** field at the top of the pane, always above the body.
