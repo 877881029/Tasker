@@ -5,7 +5,7 @@ Git：`main` 应与 `origin/main` 同步（https://github.com/877881029/Tasker �
 
 ## 当前目标
 
-**便签卡片 + 详情完成/删除**（已完成实现，待冻结包）
+**便签卡片 + 详情完成/删除**（已完成，冻结包已按此重建）
 
 规格：`docs/superpowers/specs/2026-09-15-note-card-detail-actions-design.md`
 
@@ -15,7 +15,7 @@ Git：`main` 应与 `origin/main` 同步（https://github.com/877881029/Tasker �
 
 ## 下一步
 
-1. 关闭旧 Tasker，打冻结包后双击桌面快捷方式
+1. 双击桌面快捷方式打开刚打好的 `dist\Tasker\Tasker.exe`
 2. 试用：点标题进详情、完成、删除、长标题换行
 
 ## 上一目标（已完成）
@@ -29,6 +29,7 @@ Tasker 是 Windows 桌面个人工作台。数据 `%LOCALAPPDATA%\Tasker\`。远
 ## 已完成
 
 - v1 功能与图标、冻结、任务栏 T、纸色坞与空白草稿单例
+- 2026-09-15：便签卡片 + 详情完成/删除；冻结包已重建
 
 ## 阻塞项
 
