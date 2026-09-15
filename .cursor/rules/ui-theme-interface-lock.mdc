@@ -1,0 +1,19 @@
+---
+description: Lock Tasker theme tokens and public interfaces; UI polish must not change them.
+alwaysApply: true
+---
+
+# UI 主题与接口锁死
+
+权威合同：`docs/superpowers/specs/2026-09-15-ui-contract-lock.md`。
+
+允许：间距、对齐、字号（未单独成 token 的）、空态文案、滚动与层次，且必须继续引用现有 theme token 和 objectName。
+
+禁止（除非用户先批准新规格）：
+
+- 改 `src/tasker/theme.py` 的 token 名或 hex，或另起一套配色
+- 改 16px 壳圆角 / 8px 卡片圆角 / 钴 T 图标
+- 改 `Store` / `Item` / `journal` / `paths` 的公开函数签名与磁盘 YAML+日志格式
+- 改快捷键 Ctrl+I / Ctrl+S / Esc 的语义，或把保存/关闭按钮加回详情
+- 把坞改回 `Qt.Window` 任务栏按钮，或去掉托盘
+- 改 `APP_USER_MODEL_ID`、单实例名、`geometry_for_screen` 右 1/3 规则

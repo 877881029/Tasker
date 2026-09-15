@@ -10,7 +10,8 @@
 | 已批准规格 | `docs/superpowers/specs/` |
 | 实施计划 | `docs/superpowers/plans/` |
 | 本流程 | `docs/superpowers/process.md` |
-| Cursor 强制规则 | `.cursor/rules/git-progress-handoff.mdc` |
+| Cursor 强制规则 | `.cursor/rules/git-progress-handoff.mdc`、`.cursor/rules/ui-theme-interface-lock.mdc` |
+| UI 合同（主题+接口锁死） | `docs/superpowers/specs/2026-09-15-ui-contract-lock.md` |
 
 聊天记录不是权威。权威是已推送的 git。
 

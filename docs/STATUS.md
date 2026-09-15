@@ -5,22 +5,21 @@ Git：`main` 应与 `origin/main` 同步（https://github.com/877881029/Tasker �
 
 ## 当前目标
 
-**工作台走系统托盘，不占任务栏按钮**（已完成，冻结包已按此重建）
+**UI 合同已锁死并入库**（供后续只优化布局，不改主题与接口）
 
-规格：`docs/superpowers/specs/2026-09-15-tray-not-taskbar-design.md`
+合同：`docs/superpowers/specs/2026-09-15-ui-contract-lock.md`  
+规则：`.cursor/rules/ui-theme-interface-lock.mdc`  
+测试：`tests/test_ui_contract.py`
 
-- `Qt.Tool` 无任务栏按钮；托盘图标左键显示，右键退出
-- 坞上 × 只隐藏窗口，进程留在托盘
-- Windows「隐藏的图标」由系统设置决定，程序无法强制塞进 overflow
+允许改间距/层次；禁止改 `theme.py` hex、Store/journal/paths 签名、快捷键语义、托盘/右 1/3 坞、任务 md 格式。
 
 ## 下一步
 
-1. 双击桌面 Tasker；任务栏不应再有常驻按钮，看托盘/隐藏图标里的 T
-2. × 收起坞；托盘「显示」再打开，「退出」才结束进程
+别人基于上述合同做 UI 打磨即可。主题和接口变更必须先另写规格并得到批准。
 
 ## 上一目标（已完成）
 
-**Markdown 文件存储 + Ctrl+I / Ctrl+S / Esc**
+**工作台走系统托盘，不占任务栏按钮**（冻结包已重建）
 
 ## 固定收尾
 
@@ -33,7 +32,7 @@ Tasker 是 Windows 桌面个人工作台。数据 `%LOCALAPPDATA%\Tasker\tasks\`
 ## 已完成
 
 - v1、纸色坞、单实例、气泡详情、md 日志
-- 2026-09-15：托盘工作台（不占任务栏）
+- 2026-09-15：托盘工作台；UI 主题与接口合同锁死
 
 ## 阻塞项
 
