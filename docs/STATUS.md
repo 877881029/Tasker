@@ -5,7 +5,7 @@ Git：`main` 应与 `origin/main` 同步（https://github.com/877881029/Tasker �
 
 ## 当前目标
 
-**便签圆点贴合 + 空列表不占位 + 可拖动关闭**（实现中）
+**便签圆点贴合 + 空列表不占位 + 可拖动关闭**（已完成，冻结包已按此重建）
 
 规格：`docs/superpowers/specs/2026-09-15-dock-drag-close-notes-design.md`
 
@@ -15,7 +15,7 @@ Git：`main` 应与 `origin/main` 同步（https://github.com/877881029/Tasker �
 
 ## 下一步
 
-1. 测试绿后冻结 exe
+1. 双击桌面快捷方式打开刚打好的 `dist\Tasker\Tasker.exe`
 2. 试用：空列表、便签一体、拖动、关闭
 
 ## 上一目标（已完成）
@@ -29,6 +29,7 @@ Tasker 是 Windows 桌面个人工作台。数据 `%LOCALAPPDATA%\Tasker\`。远
 ## 已完成
 
 - v1 功能与图标、冻结、任务栏 T、纸色坞、空白草稿单例、详情完成/删除
+- 2026-09-15：便签圆点贴合、空草稿不展示、可拖动关闭；冻结包已重建
 
 ## 阻塞项
 
