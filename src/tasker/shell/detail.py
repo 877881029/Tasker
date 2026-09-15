@@ -28,6 +28,10 @@ def detail_geometry(avail: QRect, dock_width: int) -> QRect:
     return QRect(avail.x(), avail.y(), width, avail.height())
 
 
+def expanded_geometry(avail: QRect) -> QRect:
+    return QRect(avail.x(), avail.y(), avail.width(), avail.height())
+
+
 class JournalPane(QWidget):
     changed = Signal()
 
@@ -139,13 +143,14 @@ class DetailWindow(QWidget):
         super().__init__(parent)
         self._store = store
         self._item_id: str | None = None
-        self.setWindowTitle("详情")
-        self.setWindowFlags(
-            Qt.WindowType.Tool
-            | Qt.WindowType.WindowTitleHint
-            | Qt.WindowType.WindowCloseButtonHint
-        )
         self.setStyleSheet(f"background:{PAPER};color:{INK};font-size:16px;")
+        if parent is None:
+            self.setWindowTitle("详情")
+            self.setWindowFlags(
+                Qt.WindowType.Tool
+                | Qt.WindowType.WindowTitleHint
+                | Qt.WindowType.WindowCloseButtonHint
+            )
         ico = resource_path("assets", "icons", "tasker.ico")
         if ico.exists():
             self.setWindowIcon(QIcon(str(ico)))

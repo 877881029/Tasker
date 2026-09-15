@@ -1,6 +1,6 @@
 from dataclasses import replace
 
-from PySide6.QtCore import QRect, Qt
+from PySide6.QtCore import QPoint, QRect, Qt
 from PySide6.QtWidgets import QSizePolicy, QToolButton
 
 from tasker.shell.window import geometry_for_screen
@@ -175,6 +175,31 @@ def test_note_keeps_dot_beside_title(qtbot, tmp_path, monkeypatch):
     assert card.height() < 180
     assert card.importance.x() < card.title.x()
     assert abs(card.importance.y() - card.title.y()) < 10
+
+
+def test_detail_is_embedded_and_follows_dock_move(qtbot, tmp_path, monkeypatch):
+    monkeypatch.setenv("TASKER_DATA_DIR", str(tmp_path))
+    from tasker.shell.window import DockWindow
+
+    store = Store(tmp_path / "tasker.sqlite")
+    item = store.save(replace(store.create(), title="跟着走"))
+    dock = DockWindow(store)
+    qtbot.addWidget(dock)
+    dock.show()
+    collapsed = dock.width()
+    dock.open_detail(item.id)
+    assert dock._detail is not None
+    assert dock._detail.parent() is dock.detail_host
+    assert dock.detail_host.isVisible()
+    assert dock.width() > collapsed
+    origin = dock._detail.mapToGlobal(QPoint(0, 0))
+    dock.move(dock.pos() + QPoint(40, 24))
+    qtbot.wait(20)
+    assert dock._detail.mapToGlobal(QPoint(0, 0)) == origin + QPoint(40, 24)
+    dock._detail.close_btn.click()
+    assert not dock.detail_host.isVisible()
+    assert not dock._detail.isVisible()
+    assert dock.width() == collapsed
 
 
 def test_close_button_hides_dock(qtbot, tmp_path, monkeypatch):

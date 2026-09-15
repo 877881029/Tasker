@@ -22,7 +22,7 @@ from PySide6.QtWidgets import (
 )
 
 from tasker.resources import resource_path
-from tasker.shell.detail import DetailWindow, detail_geometry
+from tasker.shell.detail import DetailWindow, expanded_geometry
 from tasker.shell.taskbar import apply_taskbar_icon
 from tasker.store import Item, Store
 from tasker.theme import (
@@ -70,7 +70,14 @@ class ItemCard(QWidget):
         self.title.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
         layout.addWidget(self.importance, 0, Qt.AlignmentFlag.AlignTop)
         layout.addWidget(self.title, 1)
+        self._selected = False
         self.apply_item(item)
+
+    def set_selected(self, selected: bool) -> None:
+        self._selected = selected
+        item = self._store.get(self.item_id)
+        if item is not None:
+            self.apply_item(item)
 
     def mousePressEvent(self, event) -> None:
         if event.button() == Qt.MouseButton.LeftButton:
@@ -80,8 +87,9 @@ class ItemCard(QWidget):
         super().mousePressEvent(event)
 
     def apply_item(self, item: Item) -> None:
+        edge = f"border:2px solid {COBALT};" if self._selected else ""
         self.setStyleSheet(
-            f"QWidget#itemCard{{{card_style(item.state)}}}"
+            f"QWidget#itemCard{{{card_style(item.state)}{edge}}}"
             f"QWidget#itemCard:hover{{border:1px solid {COBALT};}}"
         )
         dot = {"pending": PENDING_DOT, "urgent": URGENT_DOT, "done": DONE_DOT}[item.state]
@@ -133,6 +141,7 @@ class DockWindow(QWidget):
         super().__init__(parent)
         self._store = store
         self._detail: DetailWindow | None = None
+        self._open_item_id: str | None = None
         self._active_draft_id: str | None = None
         self.setWindowTitle("Tasker")
         self.setObjectName("dock")
@@ -214,8 +223,38 @@ class DockWindow(QWidget):
         shell_layout = QVBoxLayout(self.shell)
         shell_layout.setContentsMargins(1, 1, 1, 1)
         shell_layout.setSpacing(0)
-        shell_layout.addWidget(self.chrome)
-        shell_layout.addWidget(scroll, 1)
+        self.rail = QWidget()
+        self.rail.setObjectName("rail")
+        self.rail.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        rail_layout = QVBoxLayout(self.rail)
+        rail_layout.setContentsMargins(0, 0, 0, 0)
+        rail_layout.setSpacing(0)
+        rail_layout.addWidget(self.chrome)
+        rail_layout.addWidget(scroll, 1)
+
+        self.detail_host = QWidget()
+        self.detail_host.setObjectName("detailHost")
+        self.detail_host.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        self._detail_box = QVBoxLayout(self.detail_host)
+        self._detail_box.setContentsMargins(12, 12, 4, 12)
+        self._detail_box.setSpacing(0)
+        self.detail_host.hide()
+        self.detail_host.setMaximumWidth(0)
+
+        self.notch = QWidget()
+        self.notch.setObjectName("notch")
+        self.notch.setFixedWidth(16)
+        self.notch.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        self.notch.setStyleSheet(f"background:{PAPER};")
+        self.notch.hide()
+
+        columns = QHBoxLayout()
+        columns.setContentsMargins(0, 0, 0, 0)
+        columns.setSpacing(0)
+        columns.addWidget(self.detail_host, 1)
+        columns.addWidget(self.notch, 0)
+        columns.addWidget(self.rail, 0)
+        shell_layout.addLayout(columns, 1)
         root.addWidget(self.shell)
         self._store.collapse_blank_drafts()
         self._place()
@@ -249,7 +288,17 @@ class DockWindow(QWidget):
     def _place(self) -> None:
         screen = QGuiApplication.primaryScreen()
         avail = screen.availableGeometry() if screen else QRect(0, 0, 1920, 1080)
-        self.setGeometry(geometry_for_screen(avail))
+        if self.detail_host.isVisible():
+            self.rail.setFixedWidth(max(320, avail.width() // 3))
+            self.setGeometry(expanded_geometry(avail))
+            return
+        self.rail.setMinimumWidth(0)
+        self.rail.setMaximumWidth(16777215)
+        self.setMinimumWidth(0)
+        self.setMaximumWidth(16777215)
+        target = geometry_for_screen(avail)
+        self.setGeometry(target)
+        self.resize(target.size())
 
     def _toggle_pin(self, pinned: bool) -> None:
         self.setWindowFlags(self._frame_flags(pinned))
@@ -274,20 +323,42 @@ class DockWindow(QWidget):
             if child.widget():
                 child.widget().deleteLater()
         for item in self._store.list_visible(query):
-            self.list_layout.addWidget(ItemCard(self._store, item, self.open_detail))
+            card = ItemCard(self._store, item, self.open_detail)
+            card.set_selected(item.id == self._open_item_id)
+            self.list_layout.addWidget(card)
 
     def open_detail(self, item_id: str) -> None:
         item = self._store.get(item_id)
         if item is None:
             return
+        self._open_item_id = item_id
         if self._detail is None:
-            self._detail = DetailWindow(self._store, parent=self)
-            self._detail.closed.connect(self.refresh)
+            self._detail = DetailWindow(self._store, parent=self.detail_host)
+            self._detail.setSizePolicy(
+                QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
+            )
+            self._detail_box.addWidget(self._detail, 1)
+            self._detail.closed.connect(self._on_detail_closed)
         self._detail.load(item)
-        screen = QGuiApplication.primaryScreen()
-        avail = screen.availableGeometry() if screen else QRect(0, 0, 1920, 1080)
-        self._detail.setGeometry(detail_geometry(avail, self.width()))
-        if self.pin_btn.isChecked():
-            self._detail.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, True)
+        self.detail_host.setMaximumWidth(16777215)
+        self.notch.show()
+        self.detail_host.show()
+        self._set_bubble(True)
+        self._place()
+        self.refresh()
+        self.show()
         self._detail.show()
-        self._detail.raise_()
+
+    def _on_detail_closed(self) -> None:
+        self._open_item_id = None
+        self.detail_host.hide()
+        self.notch.hide()
+        self.detail_host.setMaximumWidth(0)
+        self._set_bubble(False)
+        self._place()
+        self.refresh()
+
+    def _set_bubble(self, on: bool) -> None:
+        self.shell.setProperty("bubble", "true" if on else "false")
+        self.shell.style().unpolish(self.shell)
+        self.shell.style().polish(self.shell)
