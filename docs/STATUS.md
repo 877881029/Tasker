@@ -5,7 +5,7 @@ Git：`main` 应与 `origin/main` 同步（https://github.com/877881029/Tasker �
 
 ## 当前目标
 
-**详情贴在事项坞上，拖顶栏时一起移动**（实现完成，待你本地点开确认）
+**详情贴在事项坞上，拖顶栏时一起移动**（已完成，冻结包已按此重建）
 
 规格：`docs/superpowers/specs/2026-09-15-detail-bubble-attach-design.md`
 
@@ -15,9 +15,8 @@ Git：`main` 应与 `origin/main` 同步（https://github.com/877881029/Tasker �
 
 ## 下一步
 
-1. 运行 `python -m tasker` 或现有 `dist\Tasker\Tasker.exe`（若尚未重打冻结包，请用源码启动）
-2. 点开一张卡片：应看到左右连成一块；拖顶栏，详情跟着走
-3. 需要桌面快捷方式跟上时，再打 `scripts/build_windows.ps1`
+1. 双击桌面快捷方式打开刚打好的 `dist\Tasker\Tasker.exe`
+2. 点开一张卡片：左右应连成一块；拖顶栏，详情跟着走
 
 ## 上一目标（已完成）
 
@@ -31,7 +30,7 @@ Tasker 是 Windows 桌面个人工作台。数据 `%LOCALAPPDATA%\Tasker\`。远
 
 - v1、冻结、纸色坞、单实例、卡片只读详情编辑
 - 2026-09-15：详情倒序时间日志
-- 2026-09-15：详情嵌进坞、拖动相对位移不变
+- 2026-09-15：详情嵌进坞、拖动相对位移不变；冻结包已重建
 
 ## 阻塞项
 
