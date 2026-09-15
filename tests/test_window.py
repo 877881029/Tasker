@@ -212,7 +212,20 @@ def test_close_button_hides_dock(qtbot, tmp_path, monkeypatch):
     qtbot.addWidget(dock)
     dock.show()
     assert dock.windowFlags() & Qt.WindowType.FramelessWindowHint
+    assert dock.windowFlags() & Qt.WindowType.Tool
     assert dock.close_btn.text() == "×"
     dock.close_btn.click()
     assert not dock.isVisible()
+    assert dock.tray is not None
+
+
+def test_dock_keeps_tray_icon(qtbot, tmp_path, monkeypatch):
+    monkeypatch.setenv("TASKER_DATA_DIR", str(tmp_path))
+    from PySide6.QtWidgets import QSystemTrayIcon
+    from tasker.shell.window import DockWindow
+
+    dock = DockWindow(Store(tmp_path / "tasker.sqlite"))
+    qtbot.addWidget(dock)
+    assert isinstance(dock.tray, QSystemTrayIcon)
+    assert not dock.tray.icon().isNull()
 

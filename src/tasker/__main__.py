@@ -54,6 +54,7 @@ def main(argv: list[str] | None = None) -> int:
     set_app_user_model_id()
     QApplication.setAttribute(Qt.ApplicationAttribute.AA_ShareOpenGLContexts, True)
     qapp = QApplication.instance() or QApplication(argv)
+    qapp.setQuitOnLastWindowClosed(False)
     from tasker.ipc import SingleInstance
 
     instance = SingleInstance()

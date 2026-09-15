@@ -11,11 +11,14 @@ from PySide6.QtGui import (
     QRegion,
 )
 from PySide6.QtWidgets import (
+    QApplication,
     QHBoxLayout,
     QLabel,
     QLineEdit,
+    QMenu,
     QScrollArea,
     QSizePolicy,
+    QSystemTrayIcon,
     QToolButton,
     QVBoxLayout,
     QWidget,
@@ -23,7 +26,6 @@ from PySide6.QtWidgets import (
 
 from tasker.resources import resource_path
 from tasker.shell.detail import DetailWindow, expanded_geometry
-from tasker.shell.taskbar import apply_taskbar_icon
 from tasker.store import Item, Store
 from tasker.theme import (
     COBALT,
@@ -256,16 +258,48 @@ class DockWindow(QWidget):
         self._place()
         self.refresh()
         self._icon_path = resource_path("assets", "icons", "tasker.ico")
+        self._setup_tray()
 
     def _frame_flags(self, pinned: bool) -> Qt.WindowType:
-        flags = Qt.WindowType.Window | Qt.WindowType.FramelessWindowHint
+        flags = Qt.WindowType.Tool | Qt.WindowType.FramelessWindowHint
         if pinned:
             flags |= Qt.WindowType.WindowStaysOnTopHint
         return flags
 
+    def _setup_tray(self) -> None:
+        self.tray = QSystemTrayIcon(self)
+        if self._icon_path.exists():
+            self.tray.setIcon(QIcon(str(self._icon_path)))
+        self.tray.setToolTip("Tasker")
+        menu = QMenu()
+        show_action = menu.addAction("显示")
+        show_action.triggered.connect(self.show_from_tray)
+        quit_action = menu.addAction("退出")
+        quit_action.triggered.connect(self._quit_app)
+        self.tray.setContextMenu(menu)
+        self.tray.activated.connect(self._tray_activated)
+        if QSystemTrayIcon.isSystemTrayAvailable():
+            self.tray.show()
+
+    def show_from_tray(self) -> None:
+        self.show()
+        self.raise_()
+        self.activateWindow()
+
+    def _tray_activated(self, reason: QSystemTrayIcon.ActivationReason) -> None:
+        if reason in {
+            QSystemTrayIcon.ActivationReason.Trigger,
+            QSystemTrayIcon.ActivationReason.DoubleClick,
+        }:
+            self.show_from_tray()
+
+    def _quit_app(self) -> None:
+        app = QApplication.instance()
+        if app is not None:
+            app.quit()
+
     def showEvent(self, event) -> None:
         super().showEvent(event)
-        self._apply_taskbar()
         self._apply_round_mask()
 
     def resizeEvent(self, event) -> None:
@@ -276,10 +310,6 @@ class DockWindow(QWidget):
         path = QPainterPath()
         path.addRoundedRect(self.rect().adjusted(0, 0, -1, -1), 16, 16)
         self.setMask(QRegion(path.toFillPolygon().toPolygon()))
-
-    def _apply_taskbar(self) -> None:
-        hwnd = int(self.winId())
-        apply_taskbar_icon(hwnd, self._icon_path)
 
     def _place(self) -> None:
         screen = QGuiApplication.primaryScreen()
@@ -299,12 +329,11 @@ class DockWindow(QWidget):
     def _toggle_pin(self, pinned: bool) -> None:
         self.setWindowFlags(self._frame_flags(pinned))
         self.show()
-        self._apply_taskbar()
 
     def _close_dock(self) -> None:
         if self._detail is not None and self._detail.isVisible():
             self._detail.close_detail()
-        self.close()
+        self.hide()
 
     def _add(self) -> None:
         item = self._store.ensure_draft()
