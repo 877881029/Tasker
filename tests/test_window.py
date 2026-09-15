@@ -2,7 +2,7 @@ from PySide6.QtCore import QRect
 
 from tasker.shell.window import geometry_for_screen
 from tasker.store import Store
-from tasker.theme import DONE_BG
+from tasker.theme import DONE_BG, PAPER, dock_style
 
 
 def test_geometry_is_right_third():
@@ -42,6 +42,39 @@ def test_add_search_done_and_color(qtbot, tmp_path, monkeypatch):
     assert item is not None and item.state == "done"
     assert DONE_BG in only.styleSheet()
     assert "line-through" not in only.styleSheet()
+
+
+def test_add_reuses_single_blank_draft(qtbot, tmp_path, monkeypatch):
+    monkeypatch.setenv("TASKER_DATA_DIR", str(tmp_path))
+    from tasker.shell.window import DockWindow
+
+    store = Store(tmp_path / "tasker.sqlite")
+    dock = DockWindow(store)
+    qtbot.addWidget(dock)
+    dock.add_btn.click()
+    dock.add_btn.click()
+    assert len(store.list_visible()) == 1
+    card = dock.list_layout.itemAt(0).widget()
+    card.title.setText("第一条")
+    card._save_title()
+    dock.add_btn.click()
+    assert len(store.list_visible()) == 2
+
+
+def test_dock_is_paper_not_white_plates(qtbot, tmp_path, monkeypatch):
+    monkeypatch.setenv("TASKER_DATA_DIR", str(tmp_path))
+    from tasker.shell.window import DockWindow
+
+    css = dock_style()
+    assert "background:white" not in css.replace(" ", "")
+    assert PAPER in css
+    assert "transparent" in css
+    dock = DockWindow(Store(tmp_path / "tasker.sqlite"))
+    qtbot.addWidget(dock)
+    assert dock.pin_btn.text() == ""
+    assert not dock.pin_btn.icon().isNull()
+    assert dock.search.styleSheet() == "" or "white" not in dock.styleSheet()
+    assert PAPER in dock.styleSheet()
 
 
 def test_pin_sets_stays_on_top(qtbot, tmp_path, monkeypatch):

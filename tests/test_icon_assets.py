@@ -42,6 +42,7 @@ def test_icon_files_exist():
         "tasker-48.png",
         "tasker-256.png",
         "tasker.ico",
+        "pin.svg",
     ]
     assert [name for name in expected if not (ICON_DIR / name).exists()] == []
 

@@ -16,6 +16,22 @@ DONE_BG = "#e5e7eb"
 DONE_LINE = "#d1d5db"
 
 
+def dock_style() -> str:
+    return (
+        f"QWidget#dock{{background:{PAPER};color:{INK};}}"
+        f"QWidget#listHost{{background:{PAPER};}}"
+        f"QScrollArea#listScroll{{background:{PAPER};border:none;}}"
+        f"QLineEdit#search{{background:transparent;color:{INK};"
+        f"border:1px solid {LINE};border-radius:4px;padding:4px 8px;}}"
+        f"QLineEdit#search:focus{{border:1px solid {COBALT};}}"
+        f"QToolButton#addBtn,QToolButton#pinBtn{{background:transparent;border:none;"
+        f"color:{COBALT};font-size:18px;font-weight:600;padding:4px 8px;}}"
+        f"QToolButton#addBtn:hover,QToolButton#pinBtn:hover,"
+        f"QToolButton#pinBtn:checked{{background:{CHROME};border-radius:4px;}}"
+        "QToolButton#openDetail{background:transparent;border:none;color:#2563eb;}"
+    )
+
+
 def document_style() -> str:
     return (
         f"body{{margin:0;background:{PAPER};color:{INK};"

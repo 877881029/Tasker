@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-from PySide6.QtCore import QRect, Qt
-from PySide6.QtGui import QGuiApplication, QIcon
+from PySide6.QtCore import QRect, QSize, Qt
+from PySide6.QtGui import QColor, QGuiApplication, QIcon, QPalette
 from PySide6.QtWidgets import (
     QCheckBox,
     QHBoxLayout,
     QLabel,
     QLineEdit,
-    QPushButton,
     QScrollArea,
     QToolButton,
     QVBoxLayout,
@@ -19,14 +18,13 @@ from tasker.shell.detail import DetailWindow, detail_geometry
 from tasker.shell.taskbar import apply_taskbar_icon
 from tasker.store import Item, Store
 from tasker.theme import (
-    CHROME,
     COBALT,
     DONE_BG,
-    INK,
     PAPER,
     PENDING_BG,
     URGENT_BG,
     card_style,
+    dock_style,
 )
 
 
@@ -44,10 +42,12 @@ class ItemCard(QWidget):
         self._on_open = on_open
         self.setObjectName("itemCard")
         layout = QHBoxLayout(self)
-        layout.setContentsMargins(0, 0, 8, 0)
+        layout.setContentsMargins(12, 10, 12, 10)
+        layout.setSpacing(8)
         self.color_bar = QToolButton()
         self.color_bar.setObjectName("colorBar")
         self.color_bar.setFixedWidth(10)
+        self.color_bar.setAutoRaise(True)
         self.color_bar.clicked.connect(self._cycle)
         self.title = QLineEdit()
         self.title.setText(item.title)
@@ -59,6 +59,8 @@ class ItemCard(QWidget):
         layout.addWidget(self.color_bar)
         layout.addWidget(self.title, 1)
         self.open_btn = QToolButton()
+        self.open_btn.setObjectName("openDetail")
+        self.open_btn.setAutoRaise(True)
         self.open_btn.setText("详情")
         self.open_btn.setToolTip("打开详情，写最新状态和正文")
         self.open_btn.clicked.connect(lambda: self._on_open(self.item_id))
@@ -107,23 +109,32 @@ class DockWindow(QWidget):
         ico = resource_path("assets", "icons", "tasker.ico")
         if ico.exists():
             self.setWindowIcon(QIcon(str(ico)))
-        self.setStyleSheet(
-            f"QWidget#dock{{background:{PAPER};color:{INK};}}"
-            f"QLineEdit#search{{background:white;border:1px solid {CHROME};}}"
-        )
+        self.setStyleSheet(dock_style())
         header = QHBoxLayout()
+        header.setContentsMargins(12, 10, 12, 4)
+        header.setSpacing(8)
         label = QLabel("事项")
         label.setStyleSheet(f"color:{COBALT};font-weight:700;")
         self.search = QLineEdit()
         self.search.setObjectName("search")
         self.search.setPlaceholderText("查找…")
         self.search.textChanged.connect(self.refresh)
-        self.add_btn = QPushButton("+")
-        self.add_btn.setFixedWidth(36)
+        self.add_btn = QToolButton()
+        self.add_btn.setObjectName("addBtn")
+        self.add_btn.setAutoRaise(True)
+        self.add_btn.setText("+")
+        self.add_btn.setFixedSize(32, 32)
         self.add_btn.setToolTip("新建事项")
         self.add_btn.clicked.connect(self._add)
         self.pin_btn = QToolButton()
-        self.pin_btn.setText("钉")
+        self.pin_btn.setObjectName("pinBtn")
+        self.pin_btn.setAutoRaise(True)
+        self.pin_btn.setText("")
+        pin_icon = resource_path("assets", "icons", "pin.svg")
+        if pin_icon.exists():
+            self.pin_btn.setIcon(QIcon(str(pin_icon)))
+            self.pin_btn.setIconSize(QSize(18, 18))
+        self.pin_btn.setFixedSize(32, 32)
         self.pin_btn.setToolTip("钉在其它窗口上面")
         self.pin_btn.setCheckable(True)
         self.pin_btn.toggled.connect(self._toggle_pin)
@@ -133,16 +144,31 @@ class DockWindow(QWidget):
         header.addWidget(self.pin_btn)
 
         self.list_host = QWidget()
+        self.list_host.setObjectName("listHost")
         self.list_layout = QVBoxLayout(self.list_host)
         self.list_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+        self.list_layout.setContentsMargins(12, 8, 12, 12)
+        self.list_layout.setSpacing(10)
         scroll = QScrollArea()
+        scroll.setObjectName("listScroll")
         scroll.setWidgetResizable(True)
         scroll.setWidget(self.list_host)
         scroll.setFrameShape(scroll.Shape.NoFrame)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        paper = QColor(PAPER)
+        for widget in (self, scroll, scroll.viewport(), self.list_host):
+            palette = widget.palette()
+            palette.setColor(QPalette.ColorRole.Window, paper)
+            palette.setColor(QPalette.ColorRole.Base, paper)
+            widget.setPalette(palette)
+            widget.setAutoFillBackground(True)
 
         root = QVBoxLayout(self)
+        root.setContentsMargins(0, 0, 0, 0)
+        root.setSpacing(0)
         root.addLayout(header)
         root.addWidget(scroll, 1)
+        self._store.collapse_blank_drafts()
         self._place()
         self.refresh()
         self._icon_path = resource_path("assets", "icons", "tasker.ico")
@@ -170,7 +196,7 @@ class DockWindow(QWidget):
         self._apply_taskbar()
 
     def _add(self) -> None:
-        item = self._store.create()
+        item = self._store.ensure_draft()
         self.refresh()
         self._focus_card(item.id)
 

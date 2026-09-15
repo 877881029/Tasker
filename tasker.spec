@@ -18,6 +18,7 @@ pyside6_datas = collect_data_files(
 pyside6_hidden = (
     collect_submodules('PySide6.QtWebEngineCore')
     + collect_submodules('PySide6.QtWebEngineWidgets')
+    + collect_submodules('PySide6.QtSvg')
 )
 
 a = Analysis(
@@ -28,6 +29,7 @@ a = Analysis(
     + [
         (str(ROOT / "assets/icons/tasker.ico"), "assets/icons"),
         (str(ROOT / "assets/icons/tasker-t.svg"), "assets/icons"),
+        (str(ROOT / "assets/icons/pin.svg"), "assets/icons"),
         (str(ROOT / "VERSION"), "."),
     ],
     hiddenimports=pyside6_hidden,

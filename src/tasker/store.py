@@ -11,6 +11,15 @@ from tasker.paths import attachments_dir
 STATES = ("pending", "urgent", "done")
 
 
+def is_blank_draft(item: Item) -> bool:
+    return (
+        item.state == "pending"
+        and not item.title.strip()
+        and not item.status_pin.strip()
+        and not item.body_md.strip()
+    )
+
+
 @dataclass(frozen=True)
 class Item:
     id: str
@@ -59,6 +68,26 @@ class Store:
         )
         self._insert(item)
         return item
+
+    def delete(self, item_id: str) -> None:
+        self._conn.execute("DELETE FROM items WHERE id = ?", (item_id,))
+        self._conn.commit()
+
+    def collapse_blank_drafts(self) -> Item | None:
+        blanks = [item for item in self.list_visible() if is_blank_draft(item)]
+        if not blanks:
+            return None
+        keep = max(blanks, key=lambda item: item.updated_at)
+        for extra in blanks:
+            if extra.id != keep.id:
+                self.delete(extra.id)
+        return keep
+
+    def ensure_draft(self) -> Item:
+        existing = self.collapse_blank_drafts()
+        if existing is not None:
+            return existing
+        return self.create()
 
     def get(self, item_id: str) -> Item | None:
         row = self._conn.execute("SELECT * FROM items WHERE id = ?", (item_id,)).fetchone()
