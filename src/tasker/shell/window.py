@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-from PySide6.QtCore import QRect, QSize, Qt
-from PySide6.QtGui import QColor, QGuiApplication, QIcon, QPalette, QTextOption
+from PySide6.QtCore import QEvent, QPoint, QRect, QSize, Qt
+from PySide6.QtGui import QColor, QGuiApplication, QIcon, QMouseEvent, QPalette, QTextOption
 from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QLineEdit,
     QScrollArea,
+    QSizePolicy,
     QTextEdit,
     QToolButton,
     QVBoxLayout,
@@ -16,7 +17,7 @@ from PySide6.QtWidgets import (
 from tasker.resources import resource_path
 from tasker.shell.detail import DetailWindow, detail_geometry
 from tasker.shell.taskbar import apply_taskbar_icon
-from tasker.store import Item, Store
+from tasker.store import Item, Store, is_blank_draft
 from tasker.theme import (
     COBALT,
     DONE_DOT,
@@ -65,10 +66,12 @@ class ItemCard(QWidget):
         self.item_id = item.id
         self._on_open = on_open
         self.setObjectName("itemCard")
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        self.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Maximum)
         self.setMinimumHeight(88)
         layout = QHBoxLayout(self)
-        layout.setContentsMargins(14, 14, 14, 14)
-        layout.setSpacing(12)
+        layout.setContentsMargins(14, 12, 14, 12)
+        layout.setSpacing(10)
         self.importance = QToolButton()
         self.importance.setObjectName("importance")
         self.importance.setFixedSize(20, 20)
@@ -81,7 +84,7 @@ class ItemCard(QWidget):
         self.title.setPlainText(item.title)
         self.title.blockSignals(False)
         self.title.textChanged.connect(self._save_title)
-        layout.addWidget(self.importance, 0, Qt.AlignmentFlag.AlignTop)
+        layout.addWidget(self.importance, 0, Qt.AlignmentFlag.AlignVCenter)
         layout.addWidget(self.title, 1)
         self.apply_item(item)
 
@@ -90,7 +93,10 @@ class ItemCard(QWidget):
         super().mouseDoubleClickEvent(event)
 
     def apply_item(self, item: Item) -> None:
-        self.setStyleSheet(f"QWidget#itemCard{{{card_style(item.state)}}}")
+        self.setStyleSheet(
+            f"QWidget#itemCard{{{card_style(item.state)}}}"
+            f"QWidget#itemCard:hover{{border:1px solid {COBALT};}}"
+        )
         dot = {"pending": PENDING_DOT, "urgent": URGENT_DOT, "done": DONE_DOT}[item.state]
         self.importance.setStyleSheet(
             f"QToolButton{{background:{dot};border:none;border-radius:10px;}}"
@@ -109,22 +115,60 @@ class ItemCard(QWidget):
         self._store.save(replace(item, title=self.title.toPlainText()))
 
 
+class ChromeBar(QWidget):
+    def __init__(self, host: QWidget, parent=None) -> None:
+        super().__init__(parent)
+        self._host = host
+        self._drag: QPoint | None = None
+
+    def eventFilter(self, watched, event) -> bool:
+        if isinstance(event, QMouseEvent):
+            self._handle_mouse(event)
+        return super().eventFilter(watched, event)
+
+    def mousePressEvent(self, event: QMouseEvent) -> None:
+        self._handle_mouse(event)
+        super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event: QMouseEvent) -> None:
+        self._handle_mouse(event)
+        super().mouseMoveEvent(event)
+
+    def mouseReleaseEvent(self, event: QMouseEvent) -> None:
+        self._handle_mouse(event)
+        super().mouseReleaseEvent(event)
+
+    def _handle_mouse(self, event: QMouseEvent) -> None:
+        kind = event.type()
+        if kind == QEvent.Type.MouseButtonPress and event.button() == Qt.MouseButton.LeftButton:
+            self._drag = event.globalPosition().toPoint() - self._host.frameGeometry().topLeft()
+        elif kind == QEvent.Type.MouseMove and self._drag is not None:
+            if event.buttons() & Qt.MouseButton.LeftButton:
+                self._host.move(event.globalPosition().toPoint() - self._drag)
+        elif kind == QEvent.Type.MouseButtonRelease:
+            self._drag = None
+
+
 class DockWindow(QWidget):
     def __init__(self, store: Store, parent=None) -> None:
         super().__init__(parent)
         self._store = store
         self._detail: DetailWindow | None = None
+        self._active_draft_id: str | None = None
         self.setWindowTitle("Tasker")
         self.setObjectName("dock")
+        self.setWindowFlags(self._frame_flags(False))
         ico = resource_path("assets", "icons", "tasker.ico")
         if ico.exists():
             self.setWindowIcon(QIcon(str(ico)))
         self.setStyleSheet(dock_style())
-        header = QHBoxLayout()
+        self.chrome = ChromeBar(self)
+        header = QHBoxLayout(self.chrome)
         header.setContentsMargins(12, 10, 12, 4)
         header.setSpacing(8)
-        label = QLabel("事项")
-        label.setStyleSheet(f"color:{COBALT};font-weight:700;")
+        self._brand = QLabel("事项")
+        self._brand.setStyleSheet(f"color:{COBALT};font-weight:700;")
+        self._brand.installEventFilter(self.chrome)
         self.search = QLineEdit()
         self.search.setObjectName("search")
         self.search.setPlaceholderText("查找…")
@@ -148,10 +192,18 @@ class DockWindow(QWidget):
         self.pin_btn.setToolTip("钉在其它窗口上面")
         self.pin_btn.setCheckable(True)
         self.pin_btn.toggled.connect(self._toggle_pin)
-        header.addWidget(label)
+        self.close_btn = QToolButton()
+        self.close_btn.setObjectName("closeDock")
+        self.close_btn.setAutoRaise(True)
+        self.close_btn.setText("×")
+        self.close_btn.setFixedSize(32, 32)
+        self.close_btn.setToolTip("关闭")
+        self.close_btn.clicked.connect(self._close_dock)
+        header.addWidget(self._brand)
         header.addWidget(self.search, 1)
         header.addWidget(self.add_btn)
         header.addWidget(self.pin_btn)
+        header.addWidget(self.close_btn)
 
         self.list_host = QWidget()
         self.list_host.setObjectName("listHost")
@@ -176,12 +228,18 @@ class DockWindow(QWidget):
         root = QVBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(0)
-        root.addLayout(header)
+        root.addWidget(self.chrome)
         root.addWidget(scroll, 1)
         self._store.collapse_blank_drafts()
         self._place()
         self.refresh()
         self._icon_path = resource_path("assets", "icons", "tasker.ico")
+
+    def _frame_flags(self, pinned: bool) -> Qt.WindowType:
+        flags = Qt.WindowType.Window | Qt.WindowType.FramelessWindowHint
+        if pinned:
+            flags |= Qt.WindowType.WindowStaysOnTopHint
+        return flags
 
     def showEvent(self, event) -> None:
         super().showEvent(event)
@@ -197,16 +255,18 @@ class DockWindow(QWidget):
         self.setGeometry(geometry_for_screen(avail))
 
     def _toggle_pin(self, pinned: bool) -> None:
-        flags = self.windowFlags()
-        if pinned:
-            self.setWindowFlags(flags | Qt.WindowType.WindowStaysOnTopHint)
-        else:
-            self.setWindowFlags(flags & ~Qt.WindowType.WindowStaysOnTopHint)
+        self.setWindowFlags(self._frame_flags(pinned))
         self.show()
         self._apply_taskbar()
 
+    def _close_dock(self) -> None:
+        if self._detail is not None and self._detail.isVisible():
+            self._detail.close_detail()
+        self.close()
+
     def _add(self) -> None:
         item = self._store.ensure_draft()
+        self._active_draft_id = item.id
         self.refresh()
         self._focus_card(item.id)
 
@@ -224,6 +284,8 @@ class DockWindow(QWidget):
             if child.widget():
                 child.widget().deleteLater()
         for item in self._store.list_visible(query):
+            if is_blank_draft(item) and item.id != self._active_draft_id:
+                continue
             self.list_layout.addWidget(ItemCard(self._store, item, self.open_detail))
 
     def open_detail(self, item_id: str) -> None:

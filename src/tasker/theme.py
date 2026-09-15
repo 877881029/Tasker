@@ -27,14 +27,13 @@ def dock_style() -> str:
         f"QLineEdit#search{{background:transparent;color:{INK};"
         f"border:1px solid {LINE};border-radius:4px;padding:4px 8px;}}"
         f"QLineEdit#search:focus{{border:1px solid {COBALT};}}"
-        f"QToolButton#addBtn,QToolButton#pinBtn{{background:transparent;border:none;"
+        f"QToolButton#addBtn,QToolButton#pinBtn,QToolButton#closeDock{{background:transparent;border:none;"
         f"color:{COBALT};font-size:18px;font-weight:600;padding:4px 8px;}}"
-        f"QToolButton#addBtn:hover,QToolButton#pinBtn:hover,"
+        f"QToolButton#addBtn:hover,QToolButton#pinBtn:hover,QToolButton#closeDock:hover,"
         f"QToolButton#pinBtn:checked{{background:{CHROME};border-radius:4px;}}"
-        f"QTextEdit#titleField{{background:transparent;color:{INK};border:1px solid transparent;"
-        "border-radius:4px;padding:4px;font-size:15px;}}"
-        f"QTextEdit#titleField:hover,QTextEdit#titleField:focus{{background:{CHROME};"
-        f"border:1px solid {COBALT};}}"
+        f"QWidget#itemCard{{}}"
+        f"QTextEdit#titleField{{background:transparent;color:{INK};border:none;"
+        "padding:2px;font-size:15px;}}"
     )
 
 
@@ -65,6 +64,6 @@ def card_style(state: str) -> str:
     else:
         bg, line = PENDING_BG, PENDING_LINE
     return (
-        f"background:{bg};border:1px solid {line};border-radius:6px;"
+        f"background:{bg};border:1px solid {line};border-radius:8px;"
         "text-decoration:none;"
     )

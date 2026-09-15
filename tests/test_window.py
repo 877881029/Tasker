@@ -1,7 +1,7 @@
 from dataclasses import replace
 
 from PySide6.QtCore import QRect, Qt
-from PySide6.QtWidgets import QToolButton
+from PySide6.QtWidgets import QSizePolicy, QToolButton
 
 from tasker.shell.window import geometry_for_screen
 from tasker.store import Store
@@ -80,6 +80,7 @@ def test_dock_is_paper_not_white_plates(qtbot, tmp_path, monkeypatch):
     qtbot.addWidget(dock)
     assert dock.pin_btn.text() == ""
     assert not dock.pin_btn.icon().isNull()
+    assert dock.close_btn.text() == "×"
     assert dock.search.styleSheet() == "" or "white" not in dock.styleSheet()
     assert PAPER in dock.styleSheet()
 
@@ -139,4 +140,48 @@ def test_title_click_opens_detail_and_delete_removes_item(qtbot, tmp_path, monke
     assert store.get(item.id) is None
     assert not dock._detail.isVisible()
     assert dock.list_layout.count() == 0
+
+
+def test_blank_drafts_hidden_until_add(qtbot, tmp_path, monkeypatch):
+    monkeypatch.setenv("TASKER_DATA_DIR", str(tmp_path))
+    from tasker.shell.window import DockWindow
+
+    store = Store(tmp_path / "tasker.sqlite")
+    store.create()
+    store.create()
+    dock = DockWindow(store)
+    qtbot.addWidget(dock)
+    assert dock.list_layout.count() == 0
+    dock.add_btn.click()
+    assert dock.list_layout.count() == 1
+
+
+def test_note_keeps_dot_beside_title(qtbot, tmp_path, monkeypatch):
+    monkeypatch.setenv("TASKER_DATA_DIR", str(tmp_path))
+    from tasker.shell.window import DockWindow
+
+    store = Store(tmp_path / "tasker.sqlite")
+    store.save(replace(store.create(), title="对齐便签"))
+    dock = DockWindow(store)
+    qtbot.addWidget(dock)
+    dock.resize(400, 800)
+    dock.show()
+    card = dock.list_layout.itemAt(0).widget()
+    assert card.sizePolicy().verticalPolicy() == QSizePolicy.Policy.Maximum
+    assert card.height() < 180
+    assert abs(card.importance.geometry().center().y() - card.title.geometry().center().y()) < 24
+    assert card.importance.x() < card.title.x()
+
+
+def test_close_button_hides_dock(qtbot, tmp_path, monkeypatch):
+    monkeypatch.setenv("TASKER_DATA_DIR", str(tmp_path))
+    from tasker.shell.window import DockWindow
+
+    dock = DockWindow(Store(tmp_path / "tasker.sqlite"))
+    qtbot.addWidget(dock)
+    dock.show()
+    assert dock.windowFlags() & Qt.WindowType.FramelessWindowHint
+    assert dock.close_btn.text() == "×"
+    dock.close_btn.click()
+    assert not dock.isVisible()
 
