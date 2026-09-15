@@ -1,7 +1,7 @@
 from dataclasses import replace
 
 from PySide6.QtCore import QPoint, QRect, Qt
-from PySide6.QtWidgets import QSizePolicy, QToolButton
+from PySide6.QtWidgets import QLabel, QSizePolicy, QToolButton
 
 from tasker.shell.window import geometry_for_screen
 from tasker.store import Store
@@ -27,10 +27,10 @@ def test_add_search_done_and_color(qtbot, tmp_path, monkeypatch):
     assert dock._detail is not None and dock._detail.isVisible()
     assert len(store.list_visible()) == 1
     dock._detail.title_edit.setText("PDF 默认应用")
-    dock._detail.save_btn.click()
-    dock._detail.close_btn.click()
+    dock._detail.save_keep_open()
+    dock._detail.close_detail()
     dock.add_btn.click()
-    dock._detail.close_btn.click()
+    dock._detail.close_detail()
     dock.search.setText("PDF")
     assert dock.list_layout.count() == 1
     only = dock.list_layout.itemAt(0).widget()
@@ -50,7 +50,7 @@ def test_add_search_done_and_color(qtbot, tmp_path, monkeypatch):
     dock._detail.done.setChecked(True)
     item = store.get(only.item_id)
     assert item is not None and item.state == "done"
-    dock._detail.close_btn.click()
+    dock._detail.close_detail()
     only = dock.list_layout.itemAt(0).widget()
     assert DONE_BG in only.styleSheet()
     assert "line-through" not in only.styleSheet()
@@ -87,6 +87,8 @@ def test_dock_is_paper_not_white_plates(qtbot, tmp_path, monkeypatch):
     assert dock.close_btn.text() == "×"
     assert dock.search.styleSheet() == "" or "white" not in dock.styleSheet()
     assert PAPER in dock.styleSheet()
+    assert dock.chrome.layout().itemAt(0).widget() is dock.search
+    assert "事项" not in [w.text() for w in dock.chrome.findChildren(QLabel)]
 
 
 def test_pin_sets_stays_on_top(qtbot, tmp_path, monkeypatch):
@@ -113,17 +115,17 @@ def test_detail_save_and_close(qtbot, tmp_path, monkeypatch):
     dock.open_detail(item.id)
     assert dock._detail is not None
     assert dock._detail.isVisible()
-    assert dock._detail.close_btn.text() == "关闭"
-    assert dock._detail.save_btn.text() == "保存"
+    assert dock._detail.delete_btn.text() == "删除"
     dock._detail.title_edit.setText("可关闭的任务")
+    dock._detail.begin_write()
     dock._detail.journal.head_edit().setPlainText("正文")
-    dock._detail.save_btn.click()
+    dock._detail.save_keep_open()
     loaded = store.get(item.id)
     assert loaded is not None
     assert loaded.title == "可关闭的任务"
     assert loaded.body_md
     assert "正文" in loaded.body_md
-    dock._detail.close_btn.click()
+    dock._detail.close_detail()
     assert not dock._detail.isVisible()
 
 
@@ -196,7 +198,7 @@ def test_detail_is_embedded_and_follows_dock_move(qtbot, tmp_path, monkeypatch):
     dock.move(dock.pos() + QPoint(40, 24))
     qtbot.wait(20)
     assert dock._detail.mapToGlobal(QPoint(0, 0)) == origin + QPoint(40, 24)
-    dock._detail.close_btn.click()
+    dock._detail.close_detail()
     assert not dock.detail_host.isVisible()
     assert not dock._detail.isVisible()
     assert dock.width() == collapsed

@@ -1,3 +1,6 @@
+from datetime import datetime
+from dataclasses import replace
+
 from PySide6.QtCore import QMimeData, QRect, Qt
 from PySide6.QtGui import QImage
 
@@ -24,7 +27,7 @@ def test_render_markdown_escapes_raw_html_and_links():
 
 def test_paste_image_writes_attachment(qtbot, tmp_path, monkeypatch):
     monkeypatch.setenv("TASKER_DATA_DIR", str(tmp_path))
-    store = Store(tmp_path / "tasker.sqlite")
+    store = Store(tmp_path)
     item = store.create()
     edit = MarkdownEdit(store, item.id)
     qtbot.addWidget(edit)
@@ -35,34 +38,80 @@ def test_paste_image_writes_attachment(qtbot, tmp_path, monkeypatch):
     edit.insertFromMimeData(mime)
     text = edit.toPlainText()
     assert text.startswith("![](")
-    assert (tmp_path / "attachments" / item.id).exists()
-    assert list((tmp_path / "attachments" / item.id).glob("*.png"))
+    assert (tmp_path / "tasks" / item.id).exists()
+    assert list((tmp_path / "tasks" / item.id).glob("*.png"))
 
 
-def test_detail_journal_newest_and_title(qtbot, tmp_path, monkeypatch):
+def test_open_is_readonly_until_ctrl_i(qtbot, tmp_path, monkeypatch):
     monkeypatch.setenv("TASKER_DATA_DIR", str(tmp_path))
-    store = Store(tmp_path / "tasker.sqlite")
-    item = store.create()
+    store = Store(tmp_path)
+    item = store.save(replace(store.create(), body_md="260915.3PM\n\n旧记录"))
     win = DetailWindow(store)
     qtbot.addWidget(win)
     win.load(item)
     assert win.journal._rows
-    stamp = win.journal._rows[0][0].text()
-    assert "AM" in stamp or "PM" in stamp
+    assert win.journal.head_edit().isReadOnly()
+    win.begin_write()
+    assert not win.journal.head_edit().isReadOnly()
+    assert len(win.journal._rows) == 2
+
+
+def test_ctrl_i_same_hour_two_records(qtbot, tmp_path, monkeypatch):
+    monkeypatch.setenv("TASKER_DATA_DIR", str(tmp_path))
+    store = Store(tmp_path)
+    item = store.create()
+    win = DetailWindow(store)
+    qtbot.addWidget(win)
+    win.load(item)
+    when = datetime(2026, 9, 15, 15, 1)
+    win.journal.begin_write(when)
+    win.journal.head_edit().setPlainText("第一条")
+    win.journal.begin_write(when)
+    win.journal.head_edit().setPlainText("第二条")
+    assert [row[0].text() for row in win.journal._rows] == ["260915.3PM", "260915.3PM"]
+    blob = win.journal.collect()
+    assert blob == "260915.3PM\n\n第二条\n\n260915.3PM\n\n第一条"
+
+
+def test_ctrl_s_writes_and_stays_readonly(qtbot, tmp_path, monkeypatch):
+    monkeypatch.setenv("TASKER_DATA_DIR", str(tmp_path))
+    store = Store(tmp_path)
+    item = store.create()
+    win = DetailWindow(store)
+    qtbot.addWidget(win)
+    win.show()
+    win.load(item)
+    win.begin_write()
     win.journal.head_edit().setPlainText("已接到 setup")
     win.title_edit.setText("改脚本")
-    win.title_edit.editingFinished.emit()
-    win.save_all()
+    win.save_keep_open()
     loaded = store.get(item.id)
     assert loaded is not None
     assert loaded.status_pin == "已接到 setup"
     assert loaded.title == "改脚本"
-    assert "已接到 setup" in loaded.body_md
+    assert win.journal.head_edit().isReadOnly()
+    assert win.isVisible()
+    assert getattr(win, "save_btn", None) is None
+    assert getattr(win, "close_btn", None) is None
+
+
+def test_image_absolute_path_unchanged_on_save(qtbot, tmp_path, monkeypatch):
+    monkeypatch.setenv("TASKER_DATA_DIR", str(tmp_path))
+    store = Store(tmp_path)
+    path = "C:/Users/me/Pictures/shot.png"
+    item = store.save(replace(store.create(), body_md=f"260915.3PM\n\n![]({path})"))
+    win = DetailWindow(store)
+    qtbot.addWidget(win)
+    win.load(item)
+    win.save_keep_open()
+    loaded = store.get(item.id)
+    assert loaded is not None
+    assert path in loaded.body_md
 
 
 def test_detail_cycle_and_delete(qtbot, tmp_path, monkeypatch):
     monkeypatch.setenv("TASKER_DATA_DIR", str(tmp_path))
-    store = Store(tmp_path / "tasker.sqlite")
+    store = Store(tmp_path)
     item = store.create()
     win = DetailWindow(store)
     qtbot.addWidget(win)
@@ -72,4 +121,5 @@ def test_detail_cycle_and_delete(qtbot, tmp_path, monkeypatch):
     assert loaded is not None and loaded.state == "urgent"
     win.delete_btn.click()
     assert store.get(item.id) is None
+    assert not (tmp_path / "tasks" / f"{item.id}.md").exists()
     assert not win.isVisible()

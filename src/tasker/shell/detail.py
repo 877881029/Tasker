@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from PySide6.QtCore import QEvent, QRect, Qt, Signal
+from PySide6.QtCore import QRect, Qt, Signal
 from PySide6.QtGui import QCloseEvent, QFont, QIcon, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QCheckBox,
@@ -17,10 +17,10 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from tasker.journal import dump_journal, ensure_current, parse_journal, stamp_for
+from tasker.journal import dump_journal, parse_journal, prepend_record
 from tasker.resources import resource_path
 from tasker.store import Item, Store
-from tasker.theme import CHROME, COBALT, DONE_DOT, INK, MUTED, PAPER, PENDING_DOT, URGENT_DOT
+from tasker.theme import COBALT, DONE_DOT, INK, MUTED, PAPER, PENDING_DOT, URGENT_DOT
 
 
 def detail_geometry(avail: QRect, dock_width: int) -> QRect:
@@ -54,8 +54,7 @@ class JournalPane(QWidget):
         root.addWidget(self.scroll)
 
     def load(self, body: str, when: datetime | None = None) -> None:
-        moment = when or datetime.now()
-        self._rebuild(ensure_current(parse_journal(body), moment))
+        self._rebuild(parse_journal(body), writable_head=False)
 
     def collect(self) -> str:
         return dump_journal(self._from_ui())
@@ -69,28 +68,19 @@ class JournalPane(QWidget):
     def head_edit(self) -> QPlainTextEdit:
         return self._rows[0][1]
 
-    def capture_input(self, when: datetime | None = None) -> None:
+    def begin_write(self, when: datetime | None = None) -> None:
         moment = when or datetime.now()
-        self._rebuild(ensure_current(self._from_ui(), moment))
+        self._rebuild(prepend_record(self._from_ui(), moment), writable_head=True)
         self._focus_head()
 
-    def eventFilter(self, watched, event) -> bool:
-        if event.type() == QEvent.Type.KeyPress and isinstance(watched, QPlainTextEdit):
-            text = event.text()
-            if text and text.isprintable():
-                stamp = stamp_for(datetime.now())
-                head = self.head_edit()
-                if self._rows[0][0].text() != stamp or watched is not head:
-                    self.capture_input()
-                    head = self.head_edit()
-                    head.insertPlainText(text)
-                    return True
-        return super().eventFilter(watched, event)
+    def set_all_readonly(self) -> None:
+        for _label, editor in self._rows:
+            editor.setReadOnly(True)
 
     def _from_ui(self) -> list[tuple[str, str]]:
         return [(label.text(), edit.toPlainText()) for label, edit in self._rows]
 
-    def _rebuild(self, entries: list[tuple[str, str]]) -> None:
+    def _rebuild(self, entries: list[tuple[str, str]], *, writable_head: bool) -> None:
         while self._list.count():
             child = self._list.takeAt(0)
             if child.widget():
@@ -117,13 +107,11 @@ class JournalPane(QWidget):
                 f"QPlainTextEdit{{background:{PAPER};color:{INK};border:none;font-size:15px;}}"
             )
             editor.setPlaceholderText("记录…")
-            editor.installEventFilter(self)
-            editor.textChanged.connect(self.changed)
+            editor.setReadOnly(not (writable_head and not self._rows))
             line.addWidget(gutter, 0)
             line.addWidget(editor, 1)
             self._list.addWidget(row)
             self._rows.append((gutter, editor))
-        self._focus_head()
 
     def _focus_head(self) -> None:
         if not self._rows:
@@ -161,20 +149,6 @@ class DetailWindow(QWidget):
         title_font = QFont(self.title_edit.font())
         title_font.setPointSize(16)
         self.title_edit.setFont(title_font)
-        self.save_btn = QPushButton("保存")
-        self.save_btn.setObjectName("saveBtn")
-        self.save_btn.setStyleSheet(
-            f"background:{COBALT};color:white;border:none;padding:10px 18px;"
-            "border-radius:6px;font-size:15px;"
-        )
-        self.close_btn = QPushButton("关闭")
-        self.close_btn.setObjectName("closeBtn")
-        self.close_btn.setStyleSheet(
-            f"background:{CHROME};color:{INK};border:1px solid {CHROME};"
-            "padding:10px 18px;border-radius:6px;font-size:15px;"
-        )
-        self.save_btn.clicked.connect(self.save_all)
-        self.close_btn.clicked.connect(self.close_detail)
 
         self.done = QCheckBox("完成")
         self.done.setObjectName("doneBox")
@@ -198,18 +172,16 @@ class DetailWindow(QWidget):
         bar.addWidget(self.importance)
         bar.addWidget(self.title_edit, 1)
         bar.addWidget(self.done)
-        bar.addWidget(self.save_btn)
-        bar.addWidget(self.close_btn)
         bar.addWidget(self.delete_btn)
 
         self.journal = JournalPane()
-        self.journal.changed.connect(self._save_body)
         layout = QVBoxLayout(self)
         layout.addLayout(bar)
         layout.addWidget(self.journal, 1)
 
         self.title_edit.editingFinished.connect(self._save_title)
-        QShortcut(QKeySequence("Ctrl+S"), self, activated=self.save_all)
+        QShortcut(QKeySequence("Ctrl+I"), self, activated=self.begin_write)
+        QShortcut(QKeySequence("Ctrl+S"), self, activated=self.save_keep_open)
         QShortcut(QKeySequence("Esc"), self, activated=self.close_detail)
 
     def load(self, item: Item) -> None:
@@ -222,6 +194,13 @@ class DetailWindow(QWidget):
         self.title_edit.blockSignals(False)
         self.done.blockSignals(False)
         self.journal.load(item.body_md)
+
+    def begin_write(self) -> None:
+        self.journal.begin_write()
+
+    def save_keep_open(self) -> None:
+        self.save_all()
+        self.journal.set_all_readonly()
 
     def save_all(self) -> None:
         self._save_title()

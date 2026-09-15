@@ -28,7 +28,7 @@
 **Interfaces:**
 - Produces: `stamp_for(when) -> str`, `parse_journal(body) -> list[tuple[str,str]]`, `dump_journal(entries) -> str`, `prepend_record(entries, when) -> list[tuple[str,str]]` (always prepends a new empty stamp, even same hour). Keep `parse_journal` able to read old JSON lists for migrate. Drop `ensure_current` from load path (may keep function unused or delete).
 
-- [ ] **Step 1: Failing tests** in `tests/test_journal.py`
+- [x] **Step 1: Failing tests** in `tests/test_journal.py`
 
 ```python
 def test_dump_separates_records_with_one_blank_line():
