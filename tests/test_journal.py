@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from tasker.journal import dump_journal, ensure_current, parse_journal, stamp_for
+from tasker.journal import dump_journal, parse_journal, prepend_record, stamp_for
 
 
 def test_stamp_is_yymmdd_hour_ampm():
@@ -9,13 +9,18 @@ def test_stamp_is_yymmdd_hour_ampm():
     assert stamp_for(datetime(2026, 9, 15, 0, 5)) == "260915.12AM"
 
 
-def test_ensure_current_prepends_new_hour():
-    older = [("260915.2PM", "旧记录")]
-    now = datetime(2026, 9, 15, 15, 1)
-    out = ensure_current(older, now)
-    assert out[0] == ("260915.3PM", "")
-    assert out[1][1] == "旧记录"
-    assert ensure_current(out, now)[0][0] == "260915.3PM"
+def test_dump_separates_records_with_one_blank_line():
+    blob = dump_journal([("260915.4PM", "新"), ("260915.3PM", "旧")])
+    assert blob == "260915.4PM\n\n新\n\n260915.3PM\n\n旧"
+    assert parse_journal(blob) == [("260915.4PM", "新"), ("260915.3PM", "旧")]
+
+
+def test_prepend_record_same_hour_is_new_entry():
+    when = datetime(2026, 9, 15, 15, 1)
+    once = prepend_record([("260915.3PM", "已有")], when)
+    twice = prepend_record(once, when)
+    assert [e[0] for e in twice] == ["260915.3PM", "260915.3PM", "260915.3PM"]
+    assert dump_journal(twice).count("260915.3PM") == 3
 
 
 def test_parse_dump_roundtrip_and_legacy_markdown():
@@ -24,3 +29,6 @@ def test_parse_dump_roundtrip_and_legacy_markdown():
     assert parse_journal(blob) == entries
     assert parse_journal("") == []
     assert parse_journal("# 旧正文") == [("", "# 旧正文")]
+    assert parse_journal('[{"stamp":"260915.3PM","text":"json旧"}]') == [
+        ("260915.3PM", "json旧")
+    ]
