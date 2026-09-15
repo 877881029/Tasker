@@ -90,3 +90,64 @@ def test_write_paste_png(tmp_path, monkeypatch):
     assert path.exists()
     assert path.parent.name == item.id
     assert path.read_bytes().startswith(b"\x89PNG")
+
+
+def test_create_writes_md_not_sqlite(tmp_path, monkeypatch):
+    monkeypatch.setenv("TASKER_DATA_DIR", str(tmp_path))
+    store = Store(tmp_path)
+    item = store.create()
+    md = tmp_path / "tasks" / f"{item.id}.md"
+    assert md.is_file()
+    assert "state: pending" in md.read_text(encoding="utf-8")
+    assert not (tmp_path / "tasker.sqlite").exists()
+
+
+def test_delete_keeps_foreign_image(tmp_path, monkeypatch):
+    monkeypatch.setenv("TASKER_DATA_DIR", str(tmp_path))
+    store = Store(tmp_path)
+    item = store.create()
+    foreign = tmp_path / "photos" / "keep.png"
+    foreign.parent.mkdir()
+    foreign.write_bytes(b"img")
+    store.save(replace(item, body_md=f"260915.3PM\n\n![]({foreign.as_posix()})"))
+    store.delete(item.id)
+    assert not (tmp_path / "tasks" / f"{item.id}.md").exists()
+    assert foreign.exists()
+
+
+def test_migrate_sqlite_once(tmp_path, monkeypatch):
+    monkeypatch.setenv("TASKER_DATA_DIR", str(tmp_path))
+    import sqlite3
+
+    db = tmp_path / "tasker.sqlite"
+    conn = sqlite3.connect(str(db))
+    conn.execute(
+        """
+        CREATE TABLE items (
+            id TEXT PRIMARY KEY,
+            title TEXT NOT NULL,
+            state TEXT NOT NULL,
+            status_pin TEXT NOT NULL,
+            body_md TEXT NOT NULL,
+            created_at REAL NOT NULL,
+            updated_at REAL NOT NULL,
+            resume_state TEXT NOT NULL
+        )
+        """
+    )
+    conn.execute(
+        "INSERT INTO items VALUES (?,?,?,?,?,?,?,?)",
+        ("id-1", "旧任务", "urgent", "pin", '[{"stamp":"260915.3PM","text":"hello"}]', 1.0, 2.0, "urgent"),
+    )
+    conn.commit()
+    conn.close()
+    store = Store(tmp_path)
+    loaded = store.get("id-1")
+    assert loaded is not None
+    assert loaded.title == "旧任务"
+    assert loaded.state == "urgent"
+    assert loaded.body_md == "260915.3PM\n\nhello"
+    text = (tmp_path / "tasks" / "id-1.md").read_text(encoding="utf-8")
+    assert "260915.3PM" in text
+    assert "hello" in text
+

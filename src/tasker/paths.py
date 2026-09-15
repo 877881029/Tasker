@@ -20,7 +20,13 @@ def db_path() -> Path:
     return data_dir() / "tasker.sqlite"
 
 
+def tasks_dir() -> Path:
+    path = data_dir() / "tasks"
+    path.mkdir(parents=True, exist_ok=True)
+    return path
+
+
 def attachments_dir(item_id: str) -> Path:
-    path = data_dir() / "attachments" / item_id
+    path = tasks_dir() / item_id
     path.mkdir(parents=True, exist_ok=True)
     return path
