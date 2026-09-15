@@ -5,7 +5,7 @@ Git：`main` 应与 `origin/main` 同步（https://github.com/877881029/Tasker �
 
 ## 当前目标
 
-**详情改为倒序时间日志**（实现中）
+**详情改为倒序时间日志**（已完成，冻结包已按此重建）
 
 规格：`docs/superpowers/specs/2026-09-15-detail-journal-design.md`
 
@@ -14,7 +14,8 @@ Git：`main` 应与 `origin/main` 同步（https://github.com/877881029/Tasker �
 
 ## 下一步
 
-1. 测试绿后冻结 exe
+1. 双击桌面快捷方式打开刚打好的 `dist\Tasker\Tasker.exe`
+2. 试用：详情时间标记、倒序、输入跳到当前小时
 
 ## 上一目标（已完成）
 
@@ -27,6 +28,7 @@ Tasker 是 Windows 桌面个人工作台。数据 `%LOCALAPPDATA%\Tasker\`。远
 ## 已完成
 
 - v1、冻结、纸色坞、单实例、卡片只读详情编辑
+- 2026-09-15：详情倒序时间日志；冻结包已重建
 
 ## 阻塞项
 
