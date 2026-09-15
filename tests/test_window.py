@@ -1,4 +1,7 @@
-from PySide6.QtCore import QRect
+from dataclasses import replace
+
+from PySide6.QtCore import QRect, Qt
+from PySide6.QtWidgets import QToolButton
 
 from tasker.shell.window import geometry_for_screen
 from tasker.store import Store
@@ -24,22 +27,26 @@ def test_add_search_done_and_color(qtbot, tmp_path, monkeypatch):
     assert dock._detail is None or not dock._detail.isVisible()
     assert len(store.list_visible()) == 1
     card = dock.list_layout.itemAt(0).widget()
-    card.title.setText("PDF 默认应用")
-    card.title.editingFinished.emit()
+    card.title.setPlainText("PDF 默认应用")
     card._save_title()
     dock.add_btn.click()
-    other = dock.list_layout.itemAt(0).widget()
-    # list re-rendered; find PDF
     dock.search.setText("PDF")
     assert dock.list_layout.count() == 1
     only = dock.list_layout.itemAt(0).widget()
-    assert "PDF" in only.title.text()
-    only.color_bar.click()
+    assert "PDF" in only.title.toPlainText()
+    only.importance.click()
     item = store.get(only.item_id)
     assert item is not None and item.state == "urgent"
-    only.done.setChecked(True)
+    assert getattr(only, "done", None) is None
+    assert only.findChild(QToolButton, "openDetail") is None
+    assert "border-radius:10px" in only.importance.styleSheet()
+    assert only.title.minimumHeight() >= 72
+    dock.open_detail(only.item_id)
+    dock._detail.done.setChecked(True)
     item = store.get(only.item_id)
     assert item is not None and item.state == "done"
+    dock._detail.close_btn.click()
+    only = dock.list_layout.itemAt(0).widget()
     assert DONE_BG in only.styleSheet()
     assert "line-through" not in only.styleSheet()
 
@@ -55,7 +62,7 @@ def test_add_reuses_single_blank_draft(qtbot, tmp_path, monkeypatch):
     dock.add_btn.click()
     assert len(store.list_visible()) == 1
     card = dock.list_layout.itemAt(0).widget()
-    card.title.setText("第一条")
+    card.title.setPlainText("第一条")
     card._save_title()
     dock.add_btn.click()
     assert len(store.list_visible()) == 2
@@ -112,4 +119,24 @@ def test_detail_save_and_close(qtbot, tmp_path, monkeypatch):
     assert loaded.body_md == "正文"
     dock._detail.close_btn.click()
     assert not dock._detail.isVisible()
+
+
+def test_title_click_opens_detail_and_delete_removes_item(qtbot, tmp_path, monkeypatch):
+    monkeypatch.setenv("TASKER_DATA_DIR", str(tmp_path))
+    from tasker.shell.window import DockWindow
+
+    store = Store(tmp_path / "tasker.sqlite")
+    item = store.save(replace(store.create(), title="点开我"))
+    dock = DockWindow(store)
+    qtbot.addWidget(dock)
+    card = dock.list_layout.itemAt(0).widget()
+    card.title.clearFocus()
+    qtbot.mouseClick(card.title.viewport(), Qt.MouseButton.LeftButton)
+    assert dock._detail is not None
+    assert dock._detail.isVisible()
+    assert dock._detail.delete_btn.text() == "删除"
+    dock._detail.delete_btn.click()
+    assert store.get(item.id) is None
+    assert not dock._detail.isVisible()
+    assert dock.list_layout.count() == 0
 

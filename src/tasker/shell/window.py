@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 from PySide6.QtCore import QRect, QSize, Qt
-from PySide6.QtGui import QColor, QGuiApplication, QIcon, QPalette
+from PySide6.QtGui import QColor, QGuiApplication, QIcon, QPalette, QTextOption
 from PySide6.QtWidgets import (
-    QCheckBox,
     QHBoxLayout,
     QLabel,
     QLineEdit,
     QScrollArea,
+    QTextEdit,
     QToolButton,
     QVBoxLayout,
     QWidget,
@@ -19,10 +19,10 @@ from tasker.shell.taskbar import apply_taskbar_icon
 from tasker.store import Item, Store
 from tasker.theme import (
     COBALT,
-    DONE_BG,
+    DONE_DOT,
     PAPER,
-    PENDING_BG,
-    URGENT_BG,
+    PENDING_DOT,
+    URGENT_DOT,
     card_style,
     dock_style,
 )
@@ -34,6 +34,30 @@ def geometry_for_screen(avail: QRect) -> QRect:
     return QRect(x, avail.y(), width, avail.height())
 
 
+class TitleField(QTextEdit):
+    def __init__(self, on_open, parent=None) -> None:
+        super().__init__(parent)
+        self._on_open = on_open
+        self.setObjectName("titleField")
+        self.setAcceptRichText(False)
+        self.setTabChangesFocus(True)
+        self.setMinimumHeight(72)
+        self.setMaximumHeight(96)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.setWordWrapMode(QTextOption.WrapMode.WrapAtWordBoundaryOrAnywhere)
+        self.setPlaceholderText("标题")
+        self.setFrameShape(QTextEdit.Shape.NoFrame)
+        self.document().setDocumentMargin(4)
+
+    def mousePressEvent(self, event) -> None:
+        if not self.hasFocus():
+            self._on_open()
+            event.accept()
+            return
+        super().mousePressEvent(event)
+
+
 class ItemCard(QWidget):
     def __init__(self, store: Store, item: Item, on_open, parent=None) -> None:
         super().__init__(parent)
@@ -41,53 +65,39 @@ class ItemCard(QWidget):
         self.item_id = item.id
         self._on_open = on_open
         self.setObjectName("itemCard")
+        self.setMinimumHeight(88)
         layout = QHBoxLayout(self)
-        layout.setContentsMargins(12, 10, 12, 10)
-        layout.setSpacing(8)
-        self.color_bar = QToolButton()
-        self.color_bar.setObjectName("colorBar")
-        self.color_bar.setFixedWidth(10)
-        self.color_bar.setAutoRaise(True)
-        self.color_bar.clicked.connect(self._cycle)
-        self.title = QLineEdit()
-        self.title.setText(item.title)
-        self.title.setPlaceholderText("标题")
-        self.title.editingFinished.connect(self._save_title)
-        self.done = QCheckBox()
-        self.done.setChecked(item.state == "done")
-        self.done.toggled.connect(self._toggle_done)
-        layout.addWidget(self.color_bar)
+        layout.setContentsMargins(14, 14, 14, 14)
+        layout.setSpacing(12)
+        self.importance = QToolButton()
+        self.importance.setObjectName("importance")
+        self.importance.setFixedSize(20, 20)
+        self.importance.setAutoRaise(True)
+        self.importance.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.importance.setToolTip("切换普通 / 紧急")
+        self.importance.clicked.connect(self._cycle)
+        self.title = TitleField(lambda: self._on_open(self.item_id), self)
+        self.title.blockSignals(True)
+        self.title.setPlainText(item.title)
+        self.title.blockSignals(False)
+        self.title.textChanged.connect(self._save_title)
+        layout.addWidget(self.importance, 0, Qt.AlignmentFlag.AlignTop)
         layout.addWidget(self.title, 1)
-        self.open_btn = QToolButton()
-        self.open_btn.setObjectName("openDetail")
-        self.open_btn.setAutoRaise(True)
-        self.open_btn.setText("详情")
-        self.open_btn.setToolTip("打开详情，写最新状态和正文")
-        self.open_btn.clicked.connect(lambda: self._on_open(self.item_id))
-        layout.addWidget(self.open_btn)
-        layout.addWidget(self.done)
         self.apply_item(item)
+
     def mouseDoubleClickEvent(self, event) -> None:
         self._on_open(self.item_id)
         super().mouseDoubleClickEvent(event)
 
     def apply_item(self, item: Item) -> None:
-        self.setStyleSheet(
-            f"QWidget#itemCard{{{card_style(item.state)}}}"
-            "QLineEdit{border:none;background:transparent;text-decoration:none;}"
+        self.setStyleSheet(f"QWidget#itemCard{{{card_style(item.state)}}}")
+        dot = {"pending": PENDING_DOT, "urgent": URGENT_DOT, "done": DONE_DOT}[item.state]
+        self.importance.setStyleSheet(
+            f"QToolButton{{background:{dot};border:none;border-radius:10px;}}"
         )
-        self.done.blockSignals(True)
-        self.done.setChecked(item.state == "done")
-        self.done.blockSignals(False)
-        bar = {"pending": PENDING_BG, "urgent": URGENT_BG, "done": DONE_BG}[item.state]
-        self.color_bar.setStyleSheet(f"background:{bar};border:none;")
 
     def _cycle(self) -> None:
         item = self._store.cycle_color(self.item_id)
-        self.apply_item(item)
-
-    def _toggle_done(self, checked: bool) -> None:
-        item = self._store.set_done(self.item_id, checked)
         self.apply_item(item)
 
     def _save_title(self) -> None:
@@ -96,7 +106,7 @@ class ItemCard(QWidget):
         item = self._store.get(self.item_id)
         if item is None:
             return
-        self._store.save(replace(item, title=self.title.text()))
+        self._store.save(replace(item, title=self.title.toPlainText()))
 
 
 class DockWindow(QWidget):

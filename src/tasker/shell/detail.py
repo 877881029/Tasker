@@ -5,6 +5,7 @@ from pathlib import Path
 from PySide6.QtCore import Qt, QRect, Signal
 from PySide6.QtGui import QKeySequence, QShortcut, QIcon, QCloseEvent
 from PySide6.QtWidgets import (
+    QCheckBox,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -60,10 +61,22 @@ class DetailWindow(QWidget):
         self.save_btn.clicked.connect(self.save_all)
         self.close_btn.clicked.connect(self.close_detail)
 
+        self.done = QCheckBox("完成")
+        self.done.setObjectName("doneBox")
+        self.done.toggled.connect(self._toggle_done)
+        self.delete_btn = QPushButton("删除")
+        self.delete_btn.setObjectName("deleteBtn")
+        self.delete_btn.setStyleSheet(
+            f"background:transparent;color:#b91c1c;border:none;padding:6px 10px;"
+        )
+        self.delete_btn.clicked.connect(self.delete_item)
+
         bar = QHBoxLayout()
         bar.addWidget(self.title_edit, 1)
+        bar.addWidget(self.done)
         bar.addWidget(self.save_btn)
         bar.addWidget(self.close_btn)
+        bar.addWidget(self.delete_btn)
 
         self.status_pin = QPlainTextEdit()
         self.status_pin.setPlaceholderText("最新状态（置顶）")
@@ -96,11 +109,14 @@ class DetailWindow(QWidget):
         self.editor.set_item_id(item.id)
         self.title_edit.blockSignals(True)
         self.status_pin.blockSignals(True)
+        self.done.blockSignals(True)
         self.title_edit.setText(item.title)
         self.status_pin.setPlainText(item.status_pin)
         self.editor.setPlainText(item.body_md)
+        self.done.setChecked(item.state == "done")
         self.title_edit.blockSignals(False)
         self.status_pin.blockSignals(False)
+        self.done.blockSignals(False)
         self.show_visual()
 
     def save_all(self) -> None:
@@ -113,8 +129,22 @@ class DetailWindow(QWidget):
         self.hide()
         self.closed.emit()
 
+    def delete_item(self) -> None:
+        if not self._item_id:
+            return
+        self._store.delete(self._item_id)
+        self._item_id = None
+        self.hide()
+        self.closed.emit()
+
+    def _toggle_done(self, checked: bool) -> None:
+        if not self._item_id:
+            return
+        self._store.set_done(self._item_id, checked)
+
     def closeEvent(self, event: QCloseEvent) -> None:
-        self.save_all()
+        if self._item_id:
+            self.save_all()
         event.accept()
         self.closed.emit()
 

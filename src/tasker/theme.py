@@ -14,6 +14,9 @@ URGENT_BG = "#fef2f2"
 URGENT_LINE = "#fecaca"
 DONE_BG = "#e5e7eb"
 DONE_LINE = "#d1d5db"
+PENDING_DOT = "#22c55e"
+URGENT_DOT = "#ef4444"
+DONE_DOT = "#9ca3af"
 
 
 def dock_style() -> str:
@@ -28,7 +31,10 @@ def dock_style() -> str:
         f"color:{COBALT};font-size:18px;font-weight:600;padding:4px 8px;}}"
         f"QToolButton#addBtn:hover,QToolButton#pinBtn:hover,"
         f"QToolButton#pinBtn:checked{{background:{CHROME};border-radius:4px;}}"
-        "QToolButton#openDetail{background:transparent;border:none;color:#2563eb;}"
+        f"QTextEdit#titleField{{background:transparent;color:{INK};border:1px solid transparent;"
+        "border-radius:4px;padding:4px;font-size:15px;}}"
+        f"QTextEdit#titleField:hover,QTextEdit#titleField:focus{{background:{CHROME};"
+        f"border:1px solid {COBALT};}}"
     )
 
 
