@@ -24,24 +24,29 @@ def test_add_search_done_and_color(qtbot, tmp_path, monkeypatch):
     dock = DockWindow(store)
     qtbot.addWidget(dock)
     dock.add_btn.click()
-    assert dock._detail is None or not dock._detail.isVisible()
+    assert dock._detail is not None and dock._detail.isVisible()
     assert len(store.list_visible()) == 1
-    card = dock.list_layout.itemAt(0).widget()
-    card.title.setPlainText("PDF 默认应用")
-    card._save_title()
+    dock._detail.title_edit.setText("PDF 默认应用")
+    dock._detail.save_btn.click()
+    dock._detail.close_btn.click()
     dock.add_btn.click()
+    dock._detail.close_btn.click()
     dock.search.setText("PDF")
     assert dock.list_layout.count() == 1
     only = dock.list_layout.itemAt(0).widget()
-    assert "PDF" in only.title.toPlainText()
-    only.importance.click()
+    assert "PDF" in only.title.text()
+    before = store.get(only.item_id)
+    assert before is not None
+    qtbot.mouseClick(only, Qt.MouseButton.LeftButton)
+    assert dock._detail.isVisible()
+    assert store.get(only.item_id).state == before.state
+    dock._detail.importance.click()
     item = store.get(only.item_id)
     assert item is not None and item.state == "urgent"
     assert getattr(only, "done", None) is None
     assert only.findChild(QToolButton, "openDetail") is None
     assert "border-radius:10px" in only.importance.styleSheet()
     assert only.title.minimumHeight() >= 72
-    dock.open_detail(only.item_id)
     dock._detail.done.setChecked(True)
     item = store.get(only.item_id)
     assert item is not None and item.state == "done"
@@ -61,9 +66,8 @@ def test_add_reuses_single_blank_draft(qtbot, tmp_path, monkeypatch):
     dock.add_btn.click()
     dock.add_btn.click()
     assert len(store.list_visible()) == 1
-    card = dock.list_layout.itemAt(0).widget()
-    card.title.setPlainText("第一条")
-    card._save_title()
+    item = store.list_visible()[0]
+    store.save(replace(item, title="第一条"))
     dock.add_btn.click()
     assert len(store.list_visible()) == 2
 
@@ -131,8 +135,7 @@ def test_title_click_opens_detail_and_delete_removes_item(qtbot, tmp_path, monke
     dock = DockWindow(store)
     qtbot.addWidget(dock)
     card = dock.list_layout.itemAt(0).widget()
-    card.title.clearFocus()
-    qtbot.mouseClick(card.title.viewport(), Qt.MouseButton.LeftButton)
+    qtbot.mouseClick(card, Qt.MouseButton.LeftButton)
     assert dock._detail is not None
     assert dock._detail.isVisible()
     assert dock._detail.delete_btn.text() == "删除"

@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QPlainTextEdit,
     QPushButton,
+    QToolButton,
     QVBoxLayout,
     QWidget,
     QStackedWidget,
@@ -20,7 +21,7 @@ from tasker.preview.md_edit import MarkdownEdit
 from tasker.preview.md_visual import MarkdownVisual
 from tasker.resources import resource_path
 from tasker.store import Item, Store
-from tasker.theme import CHROME, COBALT, INK, PAPER
+from tasker.theme import CHROME, COBALT, DONE_DOT, INK, PAPER, PENDING_DOT, URGENT_DOT
 
 
 def detail_geometry(avail: QRect, dock_width: int) -> QRect:
@@ -64,6 +65,12 @@ class DetailWindow(QWidget):
         self.done = QCheckBox("完成")
         self.done.setObjectName("doneBox")
         self.done.toggled.connect(self._toggle_done)
+        self.importance = QToolButton()
+        self.importance.setObjectName("importance")
+        self.importance.setFixedSize(20, 20)
+        self.importance.setAutoRaise(True)
+        self.importance.setToolTip("切换普通 / 紧急")
+        self.importance.clicked.connect(self._cycle)
         self.delete_btn = QPushButton("删除")
         self.delete_btn.setObjectName("deleteBtn")
         self.delete_btn.setStyleSheet(
@@ -72,6 +79,7 @@ class DetailWindow(QWidget):
         self.delete_btn.clicked.connect(self.delete_item)
 
         bar = QHBoxLayout()
+        bar.addWidget(self.importance)
         bar.addWidget(self.title_edit, 1)
         bar.addWidget(self.done)
         bar.addWidget(self.save_btn)
@@ -114,6 +122,7 @@ class DetailWindow(QWidget):
         self.status_pin.setPlainText(item.status_pin)
         self.editor.setPlainText(item.body_md)
         self.done.setChecked(item.state == "done")
+        self._paint_importance(item)
         self.title_edit.blockSignals(False)
         self.status_pin.blockSignals(False)
         self.done.blockSignals(False)
@@ -140,7 +149,23 @@ class DetailWindow(QWidget):
     def _toggle_done(self, checked: bool) -> None:
         if not self._item_id:
             return
-        self._store.set_done(self._item_id, checked)
+        item = self._store.set_done(self._item_id, checked)
+        self._paint_importance(item)
+
+    def _cycle(self) -> None:
+        if not self._item_id:
+            return
+        item = self._store.cycle_color(self._item_id)
+        self._paint_importance(item)
+        self.done.blockSignals(True)
+        self.done.setChecked(item.state == "done")
+        self.done.blockSignals(False)
+
+    def _paint_importance(self, item: Item) -> None:
+        dot = {"pending": PENDING_DOT, "urgent": URGENT_DOT, "done": DONE_DOT}[item.state]
+        self.importance.setStyleSheet(
+            f"QToolButton{{background:{dot};border:none;border-radius:10px;}}"
+        )
 
     def closeEvent(self, event: QCloseEvent) -> None:
         if self._item_id:

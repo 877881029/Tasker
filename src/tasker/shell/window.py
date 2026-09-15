@@ -9,7 +9,6 @@ from PySide6.QtGui import (
     QPainterPath,
     QPalette,
     QRegion,
-    QTextOption,
 )
 from PySide6.QtWidgets import (
     QHBoxLayout,
@@ -17,7 +16,6 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QScrollArea,
     QSizePolicy,
-    QTextEdit,
     QToolButton,
     QVBoxLayout,
     QWidget,
@@ -30,6 +28,8 @@ from tasker.store import Item, Store
 from tasker.theme import (
     COBALT,
     DONE_DOT,
+    INK,
+    MUTED,
     PAPER,
     PENDING_DOT,
     URGENT_DOT,
@@ -44,30 +44,6 @@ def geometry_for_screen(avail: QRect) -> QRect:
     return QRect(x, avail.y(), width, avail.height())
 
 
-class TitleField(QTextEdit):
-    def __init__(self, on_open, parent=None) -> None:
-        super().__init__(parent)
-        self._on_open = on_open
-        self.setObjectName("titleField")
-        self.setAcceptRichText(False)
-        self.setTabChangesFocus(True)
-        self.setMinimumHeight(72)
-        self.setMaximumHeight(96)
-        self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.setWordWrapMode(QTextOption.WrapMode.WrapAtWordBoundaryOrAnywhere)
-        self.setPlaceholderText("标题")
-        self.setFrameShape(QTextEdit.Shape.NoFrame)
-        self.document().setDocumentMargin(4)
-
-    def mousePressEvent(self, event) -> None:
-        if not self.hasFocus():
-            self._on_open()
-            event.accept()
-            return
-        super().mousePressEvent(event)
-
-
 class ItemCard(QWidget):
     def __init__(self, store: Store, item: Item, on_open, parent=None) -> None:
         super().__init__(parent)
@@ -78,6 +54,7 @@ class ItemCard(QWidget):
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Maximum)
         self.setMinimumHeight(88)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
         layout = QHBoxLayout(self)
         layout.setContentsMargins(14, 12, 14, 12)
         layout.setSpacing(10)
@@ -85,21 +62,22 @@ class ItemCard(QWidget):
         self.importance.setObjectName("importance")
         self.importance.setFixedSize(20, 20)
         self.importance.setAutoRaise(True)
-        self.importance.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.importance.setToolTip("切换普通 / 紧急")
-        self.importance.clicked.connect(self._cycle)
-        self.title = TitleField(lambda: self._on_open(self.item_id), self)
-        self.title.blockSignals(True)
-        self.title.setPlainText(item.title)
-        self.title.blockSignals(False)
-        self.title.textChanged.connect(self._save_title)
+        self.importance.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
+        self.title = QLabel()
+        self.title.setObjectName("titleField")
+        self.title.setWordWrap(True)
+        self.title.setMinimumHeight(72)
+        self.title.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
         layout.addWidget(self.importance, 0, Qt.AlignmentFlag.AlignTop)
         layout.addWidget(self.title, 1)
         self.apply_item(item)
 
-    def mouseDoubleClickEvent(self, event) -> None:
-        self._on_open(self.item_id)
-        super().mouseDoubleClickEvent(event)
+    def mousePressEvent(self, event) -> None:
+        if event.button() == Qt.MouseButton.LeftButton:
+            self._on_open(self.item_id)
+            event.accept()
+            return
+        super().mousePressEvent(event)
 
     def apply_item(self, item: Item) -> None:
         self.setStyleSheet(
@@ -110,18 +88,10 @@ class ItemCard(QWidget):
         self.importance.setStyleSheet(
             f"QToolButton{{background:{dot};border:none;border-radius:10px;}}"
         )
-
-    def _cycle(self) -> None:
-        item = self._store.cycle_color(self.item_id)
-        self.apply_item(item)
-
-    def _save_title(self) -> None:
-        from dataclasses import replace
-
-        item = self._store.get(self.item_id)
-        if item is None:
-            return
-        self._store.save(replace(item, title=self.title.toPlainText()))
+        text = item.title.strip()
+        self.title.setText(text or "标题")
+        color = INK if text else MUTED
+        self.title.setStyleSheet(f"color:{color};font-size:15px;")
 
 
 class ChromeBar(QWidget):
@@ -295,14 +265,7 @@ class DockWindow(QWidget):
         item = self._store.ensure_draft()
         self._active_draft_id = item.id
         self.refresh()
-        self._focus_card(item.id)
-
-    def _focus_card(self, item_id: str) -> None:
-        for i in range(self.list_layout.count()):
-            widget = self.list_layout.itemAt(i).widget()
-            if isinstance(widget, ItemCard) and widget.item_id == item_id:
-                widget.title.setFocus()
-                return
+        self.open_detail(item.id)
 
     def refresh(self) -> None:
         query = self.search.text()

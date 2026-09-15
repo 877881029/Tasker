@@ -54,3 +54,18 @@ def test_detail_pin_field_on_top(qtbot, tmp_path, monkeypatch):
     assert loaded.status_pin == "已接到 setup"
     assert loaded.title == "改脚本"
     assert win.status_pin.y() < win.stack.y() or True
+
+
+def test_detail_cycle_and_delete(qtbot, tmp_path, monkeypatch):
+    monkeypatch.setenv("TASKER_DATA_DIR", str(tmp_path))
+    store = Store(tmp_path / "tasker.sqlite")
+    item = store.create()
+    win = DetailWindow(store)
+    qtbot.addWidget(win)
+    win.load(item)
+    win.importance.click()
+    loaded = store.get(item.id)
+    assert loaded is not None and loaded.state == "urgent"
+    win.delete_btn.click()
+    assert store.get(item.id) is None
+    assert not win.isVisible()

@@ -34,7 +34,7 @@ def dock_style() -> str:
         f"QToolButton#addBtn:hover,QToolButton#pinBtn:hover,QToolButton#closeDock:hover,"
         f"QToolButton#pinBtn:checked{{background:{CHROME};border-radius:4px;}}"
         f"QWidget#itemCard{{}}"
-        f"QTextEdit#titleField{{background:transparent;color:{INK};border:none;"
+        f"QLabel#titleField{{background:transparent;color:{INK};border:none;"
         "padding:2px;font-size:15px;}}"
     )
 
