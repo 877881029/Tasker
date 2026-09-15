@@ -116,12 +116,13 @@ def test_detail_save_and_close(qtbot, tmp_path, monkeypatch):
     assert dock._detail.close_btn.text() == "关闭"
     assert dock._detail.save_btn.text() == "保存"
     dock._detail.title_edit.setText("可关闭的任务")
-    dock._detail.editor.setPlainText("正文")
+    dock._detail.journal.head_edit().setPlainText("正文")
     dock._detail.save_btn.click()
     loaded = store.get(item.id)
     assert loaded is not None
     assert loaded.title == "可关闭的任务"
-    assert loaded.body_md == "正文"
+    assert loaded.body_md
+    assert "正文" in loaded.body_md
     dock._detail.close_btn.click()
     assert not dock._detail.isVisible()
 

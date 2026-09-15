@@ -11,8 +11,15 @@ from tasker.paths import attachments_dir
 STATES = ("pending", "urgent", "done")
 
 
+from tasker.journal import journal_has_text
+
+
 def is_empty_note(item: Item) -> bool:
-    return not item.title.strip() and not item.status_pin.strip() and not item.body_md.strip()
+    return (
+        not item.title.strip()
+        and not item.status_pin.strip()
+        and not journal_has_text(item.body_md)
+    )
 
 
 def is_blank_draft(item: Item) -> bool:

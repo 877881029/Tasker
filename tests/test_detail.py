@@ -39,21 +39,25 @@ def test_paste_image_writes_attachment(qtbot, tmp_path, monkeypatch):
     assert list((tmp_path / "attachments" / item.id).glob("*.png"))
 
 
-def test_detail_pin_field_on_top(qtbot, tmp_path, monkeypatch):
+def test_detail_journal_newest_and_title(qtbot, tmp_path, monkeypatch):
     monkeypatch.setenv("TASKER_DATA_DIR", str(tmp_path))
     store = Store(tmp_path / "tasker.sqlite")
     item = store.create()
     win = DetailWindow(store)
     qtbot.addWidget(win)
     win.load(item)
-    win.status_pin.setPlainText("已接到 setup")
+    assert win.journal._rows
+    stamp = win.journal._rows[0][0].text()
+    assert "AM" in stamp or "PM" in stamp
+    win.journal.head_edit().setPlainText("已接到 setup")
     win.title_edit.setText("改脚本")
     win.title_edit.editingFinished.emit()
+    win.save_all()
     loaded = store.get(item.id)
     assert loaded is not None
     assert loaded.status_pin == "已接到 setup"
     assert loaded.title == "改脚本"
-    assert win.status_pin.y() < win.stack.y() or True
+    assert "已接到 setup" in loaded.body_md
 
 
 def test_detail_cycle_and_delete(qtbot, tmp_path, monkeypatch):
