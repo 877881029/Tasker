@@ -5,7 +5,7 @@ Git：`main` 应与 `origin/main` 同步（https://github.com/877881029/Tasker �
 
 ## 当前目标
 
-**纸色坞 + 空白草稿单例**（已完成实现，待冻结包）
+**纸色坞 + 空白草稿单例**（已完成，冻结包已按此重建）
 
 规格：`docs/superpowers/specs/2026-09-15-paper-dock-draft-design.md`  
 计划：`docs/superpowers/plans/2026-09-15-paper-dock-draft.md`
@@ -16,7 +16,7 @@ Git：`main` 应与 `origin/main` 同步（https://github.com/877881029/Tasker �
 
 ## 下一步
 
-1. 关闭旧 Tasker，重新打冻结包后双击桌面快捷方式
+1. 关闭旧 Tasker，再双击桌面快捷方式（已指向刚打好的 `dist\Tasker\Tasker.exe`）
 2. 试用：连点 + 不应堆空任务；列表应是一张纸上的便签
 
 ## 上一目标（已完成）
@@ -32,7 +32,7 @@ Tasker 是 Windows 桌面个人工作台。数据 `%LOCALAPPDATA%\Tasker\`。远
 - v1 功能与图标
 - 冻结构建脚本与包装测试
 - 2026-09-14：详情保存/关闭；任务栏强制 T 图标
-- 2026-09-15：纸色坞与空白草稿单例
+- 2026-09-15：纸色坞与空白草稿单例；冻结包已重建
 
 ## 阻塞项
 
