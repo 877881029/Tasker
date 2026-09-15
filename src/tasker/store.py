@@ -11,13 +11,12 @@ from tasker.paths import attachments_dir
 STATES = ("pending", "urgent", "done")
 
 
+def is_empty_note(item: Item) -> bool:
+    return not item.title.strip() and not item.status_pin.strip() and not item.body_md.strip()
+
+
 def is_blank_draft(item: Item) -> bool:
-    return (
-        item.state == "pending"
-        and not item.title.strip()
-        and not item.status_pin.strip()
-        and not item.body_md.strip()
-    )
+    return item.state == "pending" and is_empty_note(item)
 
 
 @dataclass(frozen=True)
@@ -74,11 +73,11 @@ class Store:
         self._conn.commit()
 
     def collapse_blank_drafts(self) -> Item | None:
-        blanks = [item for item in self.list_visible() if is_blank_draft(item)]
-        if not blanks:
+        empties = [item for item in self.list_visible() if is_empty_note(item)]
+        if not empties:
             return None
-        keep = max(blanks, key=lambda item: item.updated_at)
-        for extra in blanks:
+        keep = max(empties, key=lambda item: item.updated_at)
+        for extra in empties:
             if extra.id != keep.id:
                 self.delete(extra.id)
         return keep

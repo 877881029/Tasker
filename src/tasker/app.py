@@ -27,3 +27,5 @@ class TaskerApp:
 
     def show_dock(self) -> None:
         self.dock.show()
+        self.dock.raise_()
+        self.dock.activateWindow()

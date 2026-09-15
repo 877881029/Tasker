@@ -54,7 +54,20 @@ def main(argv: list[str] | None = None) -> int:
     set_app_user_model_id()
     QApplication.setAttribute(Qt.ApplicationAttribute.AA_ShareOpenGLContexts, True)
     qapp = QApplication.instance() or QApplication(argv)
+    from tasker.ipc import SingleInstance
+
+    instance = SingleInstance()
+    holder: list[TaskerApp] = []
+
+    def activate() -> None:
+        if holder:
+            holder[0].show_dock()
+
+    if not instance.become_server(activate):
+        instance.ping_existing()
+        return 0
     app = TaskerApp(qapp)
+    holder.append(app)
     app.show_dock()
     if not _shell_integration_disabled():
         QTimer.singleShot(0, lambda: _install_shell_integration(app))

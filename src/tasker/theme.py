@@ -21,8 +21,10 @@ DONE_DOT = "#9ca3af"
 
 def dock_style() -> str:
     return (
-        f"QWidget#dock{{background:{PAPER};color:{INK};}}"
-        f"QWidget#listHost{{background:{PAPER};}}"
+        "QWidget#dock{background:transparent;}"
+        f"QWidget#shell{{background:{PAPER};color:{INK};border:1px solid {LINE};"
+        "border-radius:16px;}}"
+        f"QWidget#listHost{{background:{PAPER};border:none;}}"
         f"QScrollArea#listScroll{{background:{PAPER};border:none;}}"
         f"QLineEdit#search{{background:transparent;color:{INK};"
         f"border:1px solid {LINE};border-radius:4px;padding:4px 8px;}}"

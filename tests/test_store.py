@@ -1,6 +1,6 @@
 from dataclasses import replace
 
-from tasker.store import Store, is_blank_draft
+from tasker.store import Store, is_blank_draft, is_empty_note
 
 
 def test_create_pending_empty_title(tmp_path, monkeypatch):
@@ -68,14 +68,13 @@ def test_ensure_draft_reuses_and_collapses_blanks(tmp_path, monkeypatch):
     urgent_empty = store.cycle_color(store.create().id)
     assert is_blank_draft(a) and is_blank_draft(b)
     assert not is_blank_draft(titled)
-    assert not is_blank_draft(urgent_empty)
+    assert is_empty_note(urgent_empty)
     kept = store.ensure_draft()
     ids = {i.id for i in store.list_visible()}
-    assert kept.id in {a.id, b.id}
+    assert kept.id in {a.id, b.id, urgent_empty.id}
     assert titled.id in ids
-    assert urgent_empty.id in ids
-    blanks = [i for i in store.list_visible() if is_blank_draft(i)]
-    assert len(blanks) == 1
+    empties = [i for i in store.list_visible() if is_empty_note(i)]
+    assert len(empties) == 1
     again = store.ensure_draft()
     assert again.id == kept.id
     store.save(replace(kept, title="已写"))

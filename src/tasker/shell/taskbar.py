@@ -8,6 +8,8 @@ from pathlib import Path
 from tasker.identity import APP_USER_MODEL_ID
 
 DWMWA_FORCE_ICONIC_REPRESENTATION = 7
+DWMWA_WINDOW_CORNER_PREFERENCE = 33
+DWMWCP_ROUND = 2
 WM_SETICON = 0x0080
 ICON_SMALL = 0
 ICON_BIG = 1
@@ -23,6 +25,22 @@ def force_iconic_representation(hwnd: int) -> bool:
         result = ctypes.windll.dwmapi.DwmSetWindowAttribute(
             hwnd,
             DWMWA_FORCE_ICONIC_REPRESENTATION,
+            ctypes.byref(value),
+            ctypes.sizeof(value),
+        )
+    except Exception:
+        return False
+    return int(result) == 0
+
+
+def apply_rounded_corners(hwnd: int) -> bool:
+    if os.name != "nt" or hwnd == 0:
+        return False
+    value = ctypes.c_int(DWMWCP_ROUND)
+    try:
+        result = ctypes.windll.dwmapi.DwmSetWindowAttribute(
+            hwnd,
+            DWMWA_WINDOW_CORNER_PREFERENCE,
             ctypes.byref(value),
             ctypes.sizeof(value),
         )
@@ -81,5 +99,6 @@ def apply_taskbar_icon(hwnd: int, icon_path: Path) -> bool:
     if big:
         user32.SendMessageW(hwnd, WM_SETICON, ICON_BIG, big)
     force_iconic_representation(hwnd)
+    apply_rounded_corners(hwnd)
     apply_hwnd_app_user_model(hwnd, Path(icon_path))
     return bool(small or big)

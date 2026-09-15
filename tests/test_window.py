@@ -75,7 +75,7 @@ def test_dock_is_paper_not_white_plates(qtbot, tmp_path, monkeypatch):
     css = dock_style()
     assert "background:white" not in css.replace(" ", "")
     assert PAPER in css
-    assert "transparent" in css
+    assert "border-radius:16px" in css
     dock = DockWindow(Store(tmp_path / "tasker.sqlite"))
     qtbot.addWidget(dock)
     assert dock.pin_btn.text() == ""
@@ -142,7 +142,7 @@ def test_title_click_opens_detail_and_delete_removes_item(qtbot, tmp_path, monke
     assert dock.list_layout.count() == 0
 
 
-def test_blank_drafts_hidden_until_add(qtbot, tmp_path, monkeypatch):
+def test_empty_notes_collapse_to_one(qtbot, tmp_path, monkeypatch):
     monkeypatch.setenv("TASKER_DATA_DIR", str(tmp_path))
     from tasker.shell.window import DockWindow
 
@@ -151,7 +151,7 @@ def test_blank_drafts_hidden_until_add(qtbot, tmp_path, monkeypatch):
     store.create()
     dock = DockWindow(store)
     qtbot.addWidget(dock)
-    assert dock.list_layout.count() == 0
+    assert dock.list_layout.count() == 1
     dock.add_btn.click()
     assert dock.list_layout.count() == 1
 
@@ -169,8 +169,8 @@ def test_note_keeps_dot_beside_title(qtbot, tmp_path, monkeypatch):
     card = dock.list_layout.itemAt(0).widget()
     assert card.sizePolicy().verticalPolicy() == QSizePolicy.Policy.Maximum
     assert card.height() < 180
-    assert abs(card.importance.geometry().center().y() - card.title.geometry().center().y()) < 24
     assert card.importance.x() < card.title.x()
+    assert abs(card.importance.y() - card.title.y()) < 10
 
 
 def test_close_button_hides_dock(qtbot, tmp_path, monkeypatch):

@@ -1,7 +1,16 @@
 from __future__ import annotations
 
 from PySide6.QtCore import QEvent, QPoint, QRect, QSize, Qt
-from PySide6.QtGui import QColor, QGuiApplication, QIcon, QMouseEvent, QPalette, QTextOption
+from PySide6.QtGui import (
+    QColor,
+    QGuiApplication,
+    QIcon,
+    QMouseEvent,
+    QPainterPath,
+    QPalette,
+    QRegion,
+    QTextOption,
+)
 from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
@@ -17,7 +26,7 @@ from PySide6.QtWidgets import (
 from tasker.resources import resource_path
 from tasker.shell.detail import DetailWindow, detail_geometry
 from tasker.shell.taskbar import apply_taskbar_icon
-from tasker.store import Item, Store, is_blank_draft
+from tasker.store import Item, Store
 from tasker.theme import (
     COBALT,
     DONE_DOT,
@@ -84,7 +93,7 @@ class ItemCard(QWidget):
         self.title.setPlainText(item.title)
         self.title.blockSignals(False)
         self.title.textChanged.connect(self._save_title)
-        layout.addWidget(self.importance, 0, Qt.AlignmentFlag.AlignVCenter)
+        layout.addWidget(self.importance, 0, Qt.AlignmentFlag.AlignTop)
         layout.addWidget(self.title, 1)
         self.apply_item(item)
 
@@ -158,6 +167,7 @@ class DockWindow(QWidget):
         self.setWindowTitle("Tasker")
         self.setObjectName("dock")
         self.setWindowFlags(self._frame_flags(False))
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
         ico = resource_path("assets", "icons", "tasker.ico")
         if ico.exists():
             self.setWindowIcon(QIcon(str(ico)))
@@ -228,8 +238,15 @@ class DockWindow(QWidget):
         root = QVBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(0)
-        root.addWidget(self.chrome)
-        root.addWidget(scroll, 1)
+        self.shell = QWidget()
+        self.shell.setObjectName("shell")
+        self.shell.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        shell_layout = QVBoxLayout(self.shell)
+        shell_layout.setContentsMargins(1, 1, 1, 1)
+        shell_layout.setSpacing(0)
+        shell_layout.addWidget(self.chrome)
+        shell_layout.addWidget(scroll, 1)
+        root.addWidget(self.shell)
         self._store.collapse_blank_drafts()
         self._place()
         self.refresh()
@@ -244,6 +261,16 @@ class DockWindow(QWidget):
     def showEvent(self, event) -> None:
         super().showEvent(event)
         self._apply_taskbar()
+        self._apply_round_mask()
+
+    def resizeEvent(self, event) -> None:
+        super().resizeEvent(event)
+        self._apply_round_mask()
+
+    def _apply_round_mask(self) -> None:
+        path = QPainterPath()
+        path.addRoundedRect(self.rect().adjusted(0, 0, -1, -1), 16, 16)
+        self.setMask(QRegion(path.toFillPolygon().toPolygon()))
 
     def _apply_taskbar(self) -> None:
         hwnd = int(self.winId())
@@ -284,8 +311,6 @@ class DockWindow(QWidget):
             if child.widget():
                 child.widget().deleteLater()
         for item in self._store.list_visible(query):
-            if is_blank_draft(item) and item.id != self._active_draft_id:
-                continue
             self.list_layout.addWidget(ItemCard(self._store, item, self.open_detail))
 
     def open_detail(self, item_id: str) -> None:
