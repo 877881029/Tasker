@@ -40,4 +40,4 @@ Tasker 是 Windows 桌面个人工作台。数据 `%LOCALAPPDATA%\Tasker\tasks\`
 
 ## 阻塞项
 
-- 无
+- `git push origin main` 失败：`Permission to 877881029/Tasker.git denied to runqyang_amdeng`（本地已提交 `cb777ac`，未同步远程）
