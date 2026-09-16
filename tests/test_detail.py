@@ -98,6 +98,27 @@ def test_journal_gap_is_about_two_line_heights(qtbot, tmp_path, monkeypatch):
     assert 0 < gap <= line * 3
 
 
+def test_journal_wrapped_text_is_not_clipped(qtbot, tmp_path, monkeypatch):
+    monkeypatch.setenv("TASKER_DATA_DIR", str(tmp_path))
+    store = Store(tmp_path)
+    body = (
+        "260916.11AM\n\n"
+        "这份文档有一个小优化应该是, 我们应该重点强调一下, 之前已经有了的skill不会在最新的部署脚本中覆盖"
+        " 同时如果不是最新脚本来部署的, 那么其使用时也就不会被dashboard中检测到"
+    )
+    item = store.save(replace(store.create(), body_md=body))
+    win = DetailWindow(store)
+    qtbot.addWidget(win)
+    win.resize(640, 480)
+    win.show()
+    win.load(item)
+    qtbot.wait(80)
+    edit = win.journal.head_edit()
+    edit.document().setTextWidth(edit.viewport().width())
+    needed = int(edit.document().size().height()) + edit.fontMetrics().descent() + 2
+    assert edit.height() >= needed
+
+
 def test_ctrl_s_writes_and_stays_readonly(qtbot, tmp_path, monkeypatch):
     monkeypatch.setenv("TASKER_DATA_DIR", str(tmp_path))
     store = Store(tmp_path)

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from PySide6.QtCore import QRect, QTimer, Qt, Signal
+from PySide6.QtCore import QEvent, QRect, QTimer, Qt, Signal
 from PySide6.QtGui import QCloseEvent, QFont, QIcon, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QCheckBox,
@@ -40,6 +40,7 @@ class JournalPane(QWidget):
         super().__init__(parent)
         self.setObjectName("journal")
         self._fit_tick = 0
+        self._fitting = False
         self._rows: list[tuple[QLabel, QPlainTextEdit]] = []
         self._host = QWidget()
         self._list = QVBoxLayout(self._host)
@@ -113,6 +114,8 @@ class JournalPane(QWidget):
             editor.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
             editor.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
             editor.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+            editor.setLineWrapMode(QPlainTextEdit.LineWrapMode.WidgetWidth)
+            editor.installEventFilter(self)
             editor.textChanged.connect(lambda _=False, box=editor: self._fit_editor(box))
             row.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Maximum)
             line.addWidget(gutter, 0)
@@ -128,6 +131,15 @@ class JournalPane(QWidget):
         tick = self._fit_tick
         QTimer.singleShot(0, lambda t=tick: self._fit_all(t))
 
+    def eventFilter(self, watched, event) -> bool:
+        if (
+            not self._fitting
+            and event.type() == QEvent.Type.Resize
+            and isinstance(watched, QPlainTextEdit)
+        ):
+            self._fit_editor(watched)
+        return super().eventFilter(watched, event)
+
     def _fit_all(self, tick: int) -> None:
         if tick != self._fit_tick:
             return
@@ -135,16 +147,34 @@ class JournalPane(QWidget):
             self._fit_editor(editor)
 
     def _fit_editor(self, editor: QPlainTextEdit) -> None:
+        if self._fitting:
+            return
         try:
             editor.document()
         except RuntimeError:
             return
-        line = editor.fontMetrics().lineSpacing()
-        width = max(editor.viewport().width(), editor.width() - 8, 120)
-        editor.document().setDocumentMargin(2)
-        editor.document().setTextWidth(width)
-        height = max(line * 2, int(editor.document().size().height()) + 6)
-        editor.setFixedHeight(height)
+        metrics = editor.fontMetrics()
+        line = metrics.lineSpacing()
+        viewport_w = editor.viewport().width()
+        if viewport_w < 40:
+            return
+        self._fitting = True
+        try:
+            editor.document().setDocumentMargin(4)
+            editor.document().setTextWidth(float(viewport_w))
+            doc_h = int(editor.document().size().height() + 0.999)
+            extra = (
+                metrics.descent()
+                + editor.frameWidth() * 2
+                + editor.contentsMargins().top()
+                + editor.contentsMargins().bottom()
+                + 4
+            )
+            height = max(line * 2, doc_h + extra)
+            if editor.height() != height:
+                editor.setFixedHeight(height)
+        finally:
+            self._fitting = False
 
     def _focus_head(self) -> None:
         if not self._rows:
