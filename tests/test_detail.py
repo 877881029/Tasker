@@ -4,6 +4,7 @@ from dataclasses import replace
 from PySide6.QtCore import QMimeData, QRect, Qt
 from PySide6.QtGui import QImage
 
+from PySide6.QtWidgets import QPlainTextEdit
 from tasker.preview.md_edit import MarkdownEdit
 from tasker.preview.md_visual import render_markdown
 from tasker.shell.detail import DetailWindow, detail_geometry
@@ -71,6 +72,30 @@ def test_ctrl_i_same_hour_two_records(qtbot, tmp_path, monkeypatch):
     assert [row[0].text() for row in win.journal._rows] == ["260915.3PM", "260915.3PM"]
     blob = win.journal.collect()
     assert blob == "260915.3PM\n\n第二条\n\n260915.3PM\n\n第一条"
+
+
+def test_journal_gap_is_about_two_line_heights(qtbot, tmp_path, monkeypatch):
+    monkeypatch.setenv("TASKER_DATA_DIR", str(tmp_path))
+    store = Store(tmp_path)
+    item = store.save(
+        replace(
+            store.create(),
+            body_md="260916.11AM\n\n上一条短记录\n\n260916.10AM\n\n下一条短记录",
+        )
+    )
+    win = DetailWindow(store)
+    qtbot.addWidget(win)
+    win.resize(720, 640)
+    win.show()
+    win.load(item)
+    qtbot.wait(30)
+    first = win.journal._list.itemAt(0).widget()
+    second = win.journal._list.itemAt(1).widget()
+    edit = first.findChild(QPlainTextEdit)
+    line = edit.fontMetrics().lineSpacing()
+    gap = second.y() - (first.y() + first.height())
+    assert first.height() <= line * 5
+    assert 0 < gap <= line * 3
 
 
 def test_ctrl_s_writes_and_stays_readonly(qtbot, tmp_path, monkeypatch):

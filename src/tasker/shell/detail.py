@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from PySide6.QtCore import QRect, Qt, Signal
+from PySide6.QtCore import QRect, QTimer, Qt, Signal
 from PySide6.QtGui import QCloseEvent, QFont, QIcon, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QCheckBox,
@@ -12,6 +12,7 @@ from PySide6.QtWidgets import (
     QPlainTextEdit,
     QPushButton,
     QScrollArea,
+    QSizePolicy,
     QToolButton,
     QVBoxLayout,
     QWidget,
@@ -38,11 +39,12 @@ class JournalPane(QWidget):
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
         self.setObjectName("journal")
+        self._fit_tick = 0
         self._rows: list[tuple[QLabel, QPlainTextEdit]] = []
         self._host = QWidget()
         self._list = QVBoxLayout(self._host)
         self._list.setContentsMargins(0, 0, 8, 8)
-        self._list.setSpacing(10)
+        self._list.setSpacing(0)
         self._list.setAlignment(Qt.AlignmentFlag.AlignTop)
         self.scroll = QScrollArea()
         self.scroll.setWidgetResizable(True)
@@ -108,10 +110,41 @@ class JournalPane(QWidget):
             )
             editor.setPlaceholderText("记录…")
             editor.setReadOnly(not (writable_head and not self._rows))
+            editor.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+            editor.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+            editor.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+            editor.textChanged.connect(lambda _=False, box=editor: self._fit_editor(box))
+            row.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Maximum)
             line.addWidget(gutter, 0)
             line.addWidget(editor, 1)
             self._list.addWidget(row)
             self._rows.append((gutter, editor))
+            self._fit_editor(editor)
+        line_gap = 0
+        if self._rows:
+            line_gap = self._rows[0][1].fontMetrics().lineSpacing() * 2
+        self._list.setSpacing(line_gap)
+        self._fit_tick += 1
+        tick = self._fit_tick
+        QTimer.singleShot(0, lambda t=tick: self._fit_all(t))
+
+    def _fit_all(self, tick: int) -> None:
+        if tick != self._fit_tick:
+            return
+        for _gutter, editor in self._rows:
+            self._fit_editor(editor)
+
+    def _fit_editor(self, editor: QPlainTextEdit) -> None:
+        try:
+            editor.document()
+        except RuntimeError:
+            return
+        line = editor.fontMetrics().lineSpacing()
+        width = max(editor.viewport().width(), editor.width() - 8, 120)
+        editor.document().setDocumentMargin(2)
+        editor.document().setTextWidth(width)
+        height = max(line * 2, int(editor.document().size().height()) + 6)
+        editor.setFixedHeight(height)
 
     def _focus_head(self) -> None:
         if not self._rows:

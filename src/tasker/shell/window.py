@@ -25,7 +25,7 @@ from PySide6.QtWidgets import (
 )
 
 from tasker.resources import resource_path
-from tasker.shell.detail import DetailWindow, expanded_geometry
+from tasker.shell.detail import DetailWindow
 from tasker.store import Item, Store
 from tasker.theme import (
     COBALT,
@@ -144,6 +144,7 @@ class DockWindow(QWidget):
         self._store = store
         self._detail: DetailWindow | None = None
         self._open_item_id: str | None = None
+        self._collapsed_geo: QRect | None = None
         self._active_draft_id: str | None = None
         self.setWindowTitle("Tasker")
         self.setObjectName("dock")
@@ -255,7 +256,7 @@ class DockWindow(QWidget):
         shell_layout.addLayout(columns, 1)
         root.addWidget(self.shell)
         self._store.collapse_blank_drafts()
-        self._place()
+        self._place(initial=True)
         self.refresh()
         self._icon_path = resource_path("assets", "icons", "tasker.ico")
         self._setup_tray()
@@ -311,20 +312,36 @@ class DockWindow(QWidget):
         path.addRoundedRect(self.rect().adjusted(0, 0, -1, -1), 16, 16)
         self.setMask(QRegion(path.toFillPolygon().toPolygon()))
 
-    def _place(self) -> None:
+    def _place(self, *, initial: bool = False) -> None:
         screen = QGuiApplication.primaryScreen()
         avail = screen.availableGeometry() if screen else QRect(0, 0, 1920, 1080)
+        rail_w = max(320, avail.width() // 3)
         if self.detail_host.isVisible():
-            self.rail.setFixedWidth(max(320, avail.width() // 3))
-            self.setGeometry(expanded_geometry(avail))
+            self.rail.setFixedWidth(rail_w)
+            rail_pos = self.rail.mapToGlobal(QPoint(0, 0))
+            if rail_pos.x() == 0 and rail_pos.y() == 0 and self.width() > 0:
+                rail_pos = self.pos()
+            self.setGeometry(
+                QRect(
+                    rail_pos.x() + rail_w - avail.width(),
+                    rail_pos.y(),
+                    avail.width(),
+                    self.height(),
+                )
+            )
             return
         self.rail.setMinimumWidth(0)
         self.rail.setMaximumWidth(16777215)
         self.setMinimumWidth(0)
         self.setMaximumWidth(16777215)
-        target = geometry_for_screen(avail)
-        self.setGeometry(target)
-        self.resize(target.size())
+        if self._collapsed_geo is not None:
+            self.setGeometry(self._collapsed_geo)
+            self._collapsed_geo = None
+            return
+        if initial or self.width() < 2:
+            target = geometry_for_screen(avail)
+            self.setGeometry(target)
+            self.resize(target.size())
 
     def _toggle_pin(self, pinned: bool) -> None:
         self.setWindowFlags(self._frame_flags(pinned))
@@ -356,6 +373,8 @@ class DockWindow(QWidget):
         item = self._store.get(item_id)
         if item is None:
             return
+        if not self.detail_host.isVisible():
+            self._collapsed_geo = QRect(self.geometry())
         self._open_item_id = item_id
         if self._detail is None:
             self._detail = DetailWindow(self._store, parent=self.detail_host)

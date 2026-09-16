@@ -5,21 +5,18 @@ Git：`main` 应与 `origin/main` 同步（https://github.com/877881029/Tasker �
 
 ## 当前目标
 
-**UI 合同已锁死并入库**（供后续只优化布局，不改主题与接口）
+**关闭详情保持坞位置；日志条目间距收成约两行**（已完成，冻结包已重建）
 
-合同：`docs/superpowers/specs/2026-09-15-ui-contract-lock.md`  
-规则：`.cursor/rules/ui-theme-interface-lock.mdc`  
-测试：`tests/test_ui_contract.py`
-
-允许改间距/层次；禁止改 `theme.py` hex、Store/journal/paths 签名、快捷键语义、托盘/右 1/3 坞、任务 md 格式。
+- Esc 收起详情后，坞回到打开详情前的坐标，不再弹回屏幕右侧初始位
+- 两条日志之间的空隙约为两行字高，编辑框按内容高度收缩
 
 ## 下一步
 
-别人基于上述合同做 UI 打磨即可。主题和接口变更必须先另写规格并得到批准。
+双击桌面 Tasker：拖开坞再 Esc，应停在原处；两条日志之间应只有约两行空隙。
 
 ## 上一目标（已完成）
 
-**工作台走系统托盘，不占任务栏按钮**（冻结包已重建）
+**UI 合同已锁死并入库**
 
 ## 固定收尾
 

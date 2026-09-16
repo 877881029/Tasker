@@ -204,6 +204,26 @@ def test_detail_is_embedded_and_follows_dock_move(qtbot, tmp_path, monkeypatch):
     assert dock.width() == collapsed
 
 
+def test_closing_detail_keeps_moved_dock_position(qtbot, tmp_path, monkeypatch):
+    monkeypatch.setenv("TASKER_DATA_DIR", str(tmp_path))
+    from tasker.shell.window import DockWindow
+
+    store = Store(tmp_path / "tasker.sqlite")
+    item = store.save(replace(store.create(), title="别弹回去"))
+    dock = DockWindow(store)
+    qtbot.addWidget(dock)
+    dock.show()
+    collapsed = dock.width()
+    parked = dock.pos() + QPoint(64, 48)
+    dock.move(parked)
+    qtbot.wait(20)
+    dock.open_detail(item.id)
+    dock._detail.close_detail()
+    qtbot.wait(20)
+    assert dock.pos() == parked
+    assert dock.width() == collapsed
+
+
 def test_close_button_hides_dock(qtbot, tmp_path, monkeypatch):
     monkeypatch.setenv("TASKER_DATA_DIR", str(tmp_path))
     from tasker.shell.window import DockWindow
