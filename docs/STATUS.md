@@ -5,7 +5,7 @@ Git：`main` 应与 `origin/main` 同步（https://github.com/877881029/Tasker �
 
 ## 当前目标
 
-**日志阅读态改用 Reader 文档 CSS**（代码已合入，正在打冻结包）
+**日志阅读态改用 Reader 文档 CSS**（已完成，冻结包已重建）
 
 - 只读：QTextBrowser + `document_style`（16px / 行高 1.72 / Candara / `#1c1915`）
 - Ctrl+I 仍切回整篇编辑器
