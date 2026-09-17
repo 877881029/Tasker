@@ -48,10 +48,10 @@ class JournalPane(QWidget):
         self.editor.setReadOnly(True)
 
     def collect(self) -> str:
-        return dump_journal(self.editor.entries())
+        return dump_journal(self._filled_entries())
 
     def latest_status(self) -> str:
-        entries = self.editor.entries()
+        entries = self._filled_entries()
         if not entries:
             return ""
         return entries[0][1].strip().splitlines()[0] if entries[0][1].strip() else ""
@@ -69,7 +69,11 @@ class JournalPane(QWidget):
         self.editor.setTextCursor(cursor)
 
     def set_all_readonly(self) -> None:
+        self.editor.load_entries(self._filled_entries())
         self.editor.setReadOnly(True)
+
+    def _filled_entries(self) -> list[tuple[str, str]]:
+        return [(stamp, text) for stamp, text in self.editor.entries() if text.strip()]
 
 
 class DetailWindow(QWidget):
@@ -79,7 +83,10 @@ class DetailWindow(QWidget):
         super().__init__(parent)
         self._store = store
         self._item_id: str | None = None
-        self.setStyleSheet(f"background:{PAPER};color:{INK};font-size:16px;")
+        self.setStyleSheet(
+            f"background:{PAPER};color:{INK};font-size:16px;"
+            "font-family:Candara,Calibri,'Segoe UI';"
+        )
         if parent is None:
             self.setWindowTitle("详情")
             self.setWindowFlags(

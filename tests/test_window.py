@@ -3,7 +3,7 @@ from dataclasses import replace
 from PySide6.QtCore import QPoint, QRect, Qt
 from PySide6.QtWidgets import QLabel, QSizePolicy, QToolButton
 
-from tasker.shell.window import geometry_for_screen
+from tasker.shell.window import expand_from_dock, geometry_for_screen
 from tasker.store import Store
 from tasker.theme import DONE_BG, PAPER, dock_style
 
@@ -14,6 +14,16 @@ def test_geometry_is_right_third():
     assert geo.width() == 400
     assert geo.x() == 800
     assert geo.height() == 800
+
+
+def test_expand_from_dock_keeps_rail_right_edge():
+    avail = QRect(0, 0, 1920, 1080)
+    collapsed = QRect(400, 40, 480, 800)
+    geo = expand_from_dock(collapsed, avail)
+    assert geo.x() == 0
+    assert geo.y() == 40
+    assert geo.height() == 800
+    assert geo.x() + geo.width() == collapsed.x() + collapsed.width()
 
 
 def test_add_search_done_and_color(qtbot, tmp_path, monkeypatch):
@@ -220,6 +230,9 @@ def test_closing_detail_keeps_moved_dock_position(qtbot, tmp_path, monkeypatch):
     dock.move(parked)
     qtbot.wait(20)
     dock.open_detail(item.id)
+    qtbot.wait(20)
+    assert dock.x() + dock.width() == parked.x() + collapsed
+    assert dock.y() == parked.y()
     dock._detail.close_detail()
     qtbot.wait(20)
     assert dock.pos() == parked

@@ -84,6 +84,23 @@ def test_ctrl_i_same_hour_two_records(qtbot, tmp_path, monkeypatch):
     assert blob == "260915.3PM\n\n第二条\n\n260915.3PM\n\n第一条"
 
 
+def test_ctrl_i_without_text_drops_empty_stamp(qtbot, tmp_path, monkeypatch):
+    monkeypatch.setenv("TASKER_DATA_DIR", str(tmp_path))
+    store = Store(tmp_path)
+    item = store.save(replace(store.create(), body_md="260915.3PM\n\n旧记录"))
+    win = DetailWindow(store)
+    qtbot.addWidget(win)
+    win.load(item)
+    win.journal.begin_write(datetime(2026, 9, 17, 14, 0))
+    win.save_keep_open()
+    blob = win.journal.collect()
+    assert "260917.2PM" not in blob
+    assert win.journal.head_edit().entries() == [("260915.3PM", "旧记录")]
+    loaded = store.get(item.id)
+    assert loaded is not None
+    assert "260917.2PM" not in loaded.body_md
+
+
 def test_ctrl_i_can_edit_older_record(qtbot, tmp_path, monkeypatch):
     monkeypatch.setenv("TASKER_DATA_DIR", str(tmp_path))
     store = Store(tmp_path)
@@ -111,7 +128,7 @@ def test_ctrl_i_can_edit_older_record(qtbot, tmp_path, monkeypatch):
     assert "旧记录已改" in blob
 
 
-def test_journal_gap_is_about_two_line_heights(qtbot, tmp_path, monkeypatch):
+def test_journal_gap_is_one_blank_line(qtbot, tmp_path, monkeypatch):
     monkeypatch.setenv("TASKER_DATA_DIR", str(tmp_path))
     store = Store(tmp_path)
     item = store.save(
@@ -126,22 +143,30 @@ def test_journal_gap_is_about_two_line_heights(qtbot, tmp_path, monkeypatch):
     win.show()
     win.load(item)
     qtbot.wait(30)
-    edit = win.journal.head_edit()
-    line = edit.fontMetrics().lineSpacing()
-    second = None
-    block = edit.document().begin()
-    seen = 0
+    rows: list[tuple[str, str]] = []
+    block = win.journal.head_edit().document().begin()
     while block.isValid():
         data = block.userData()
-        if data is not None and getattr(data, "stamp", ""):
-            seen += 1
-            if seen == 2:
-                second = block
-                break
+        stamp = getattr(data, "stamp", "") if data is not None else ""
+        rows.append((stamp, block.text()))
         block = block.next()
-    assert second is not None
-    margin = second.blockFormat().topMargin()
-    assert line * 1.5 <= margin <= line * 2.5
+    assert rows == [
+        ("260916.11AM", "上一条短记录"),
+        ("", ""),
+        ("260916.10AM", "下一条短记录"),
+    ]
+
+
+def test_journal_uses_reader_document_font(qtbot, tmp_path, monkeypatch):
+    monkeypatch.setenv("TASKER_DATA_DIR", str(tmp_path))
+    store = Store(tmp_path)
+    win = DetailWindow(store)
+    qtbot.addWidget(win)
+    win.load(store.create())
+    family = win.journal.head_edit().font().family()
+    assert family in {"Candara", "Calibri", "Segoe UI"}
+    assert win.journal.head_edit().gutter_font().family() == family
+    assert win.journal.head_edit().font().weight() == win.journal.head_edit().gutter_font().weight()
 
 
 def test_journal_is_one_scrolling_editor(qtbot, tmp_path, monkeypatch):

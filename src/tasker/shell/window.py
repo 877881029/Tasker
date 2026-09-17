@@ -46,6 +46,16 @@ def geometry_for_screen(avail: QRect) -> QRect:
     return QRect(x, avail.y(), width, avail.height())
 
 
+def expand_from_dock(collapsed: QRect, avail: QRect) -> QRect:
+    right = collapsed.x() + collapsed.width()
+    x = avail.x()
+    width = right - x
+    if width < collapsed.width():
+        x = collapsed.x()
+        width = collapsed.width()
+    return QRect(x, collapsed.y(), width, collapsed.height())
+
+
 class ItemCard(QWidget):
     def __init__(self, store: Store, item: Item, on_open, parent=None) -> None:
         super().__init__(parent)
@@ -315,20 +325,10 @@ class DockWindow(QWidget):
     def _place(self, *, initial: bool = False) -> None:
         screen = QGuiApplication.primaryScreen()
         avail = screen.availableGeometry() if screen else QRect(0, 0, 1920, 1080)
-        rail_w = max(320, avail.width() // 3)
         if self.detail_host.isVisible():
-            self.rail.setFixedWidth(rail_w)
-            rail_pos = self.rail.mapToGlobal(QPoint(0, 0))
-            if rail_pos.x() == 0 and rail_pos.y() == 0 and self.width() > 0:
-                rail_pos = self.pos()
-            self.setGeometry(
-                QRect(
-                    rail_pos.x() + rail_w - avail.width(),
-                    rail_pos.y(),
-                    avail.width(),
-                    self.height(),
-                )
-            )
+            collapsed = self._collapsed_geo or QRect(self.geometry())
+            self.rail.setFixedWidth(collapsed.width())
+            self.setGeometry(expand_from_dock(collapsed, avail))
             return
         self.rail.setMinimumWidth(0)
         self.rail.setMaximumWidth(16777215)

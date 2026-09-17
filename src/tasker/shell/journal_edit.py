@@ -44,15 +44,13 @@ class JournalEditor(QPlainTextEdit):
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.setPlaceholderText("记录…")
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.setFont(_document_font(16))
+        self._gutter_font = QFont(self.font())
+        self._gutter_font.setPixelSize(13)
+        self._gutter_font.setWeight(self.font().weight())
         self.setStyleSheet(
-            f"QPlainTextEdit#journalEditor{{background:{PAPER};color:{INK};border:none;font-size:15px;}}"
+            f"QPlainTextEdit#journalEditor{{background:{PAPER};color:{INK};border:none;}}"
         )
-        gutter_font = QFont("Consolas")
-        if not gutter_font.exactMatch():
-            gutter_font = QFont("Cascadia Mono")
-        gutter_font.setPixelSize(13)
-        gutter_font.setWeight(QFont.Weight.DemiBold)
-        self._gutter_font = gutter_font
         self._gutter = _StampGutter(self)
         self.blockCountChanged.connect(lambda _n: self._sync_gutter())
         self.updateRequest.connect(self._on_update_request)
@@ -60,6 +58,9 @@ class JournalEditor(QPlainTextEdit):
 
     def gutter(self) -> QWidget:
         return self._gutter
+
+    def gutter_font(self) -> QFont:
+        return QFont(self._gutter_font)
 
     def resizeEvent(self, event: QResizeEvent) -> None:  # noqa: N802
         super().resizeEvent(event)
@@ -76,13 +77,14 @@ class JournalEditor(QPlainTextEdit):
         for index, (stamp, text) in enumerate(entries):
             if index:
                 cursor.insertBlock()
+                cursor.insertBlock()
             start = cursor.block()
             lines = (text or "").split("\n")
             cursor.insertText(lines[0])
             for line in lines[1:]:
                 cursor.insertBlock()
                 cursor.insertText(line)
-            self._mark_record(start, stamp, leading=index == 0)
+            self._mark_record(start, stamp)
         cursor.endEditBlock()
         self._sync_gutter()
 
@@ -134,12 +136,8 @@ class JournalEditor(QPlainTextEdit):
             block = block.next()
         painter.end()
 
-    def _mark_record(self, block: QTextBlock, stamp: str, *, leading: bool) -> None:
-        fmt = block.blockFormat()
-        gap = 0.0 if leading else float(self.fontMetrics().lineSpacing() * 2)
-        fmt.setTopMargin(gap)
+    def _mark_record(self, block: QTextBlock, stamp: str) -> None:
         cursor = QTextCursor(block)
-        cursor.setBlockFormat(fmt)
         cursor.block().setUserData(StampData(stamp) if stamp else None)
 
     def _newest_stamp_block(self) -> QTextBlock | None:
@@ -169,3 +167,12 @@ def _stamp_of(block: QTextBlock) -> str:
     if data is None:
         return ""
     return str(getattr(data, "stamp", "") or "")
+
+
+def _document_font(pixel_size: int) -> QFont:
+    font = QFont()
+    font.setFamilies(["Candara", "Calibri", "Segoe UI"])
+    font.setStyleHint(QFont.StyleHint.SansSerif)
+    font.setPixelSize(pixel_size)
+    font.setWeight(QFont.Weight.Normal)
+    return font

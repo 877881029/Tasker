@@ -5,7 +5,20 @@ Git：`main` 应与 `origin/main` 同步（https://github.com/877881029/Tasker �
 
 ## 当前目标
 
-**详情日志改成一整片编辑区（左时间、右正文）**（已完成，冻结包已重建）
+**详情日志展开与排版打磨**（代码已合入，正在打冻结包）
+
+- 规格：`docs/superpowers/specs/2026-09-17-detail-expand-journal-polish-design.md`
+- 点卡片从当前坞位置向左展开，轨道右缘不动
+- Ctrl+I 未写入则保存时丢掉空时间戳
+- 记录之间一空行；正文/时间戳统一 Candara/Calibri/Segoe UI
+
+## 下一步
+
+双击桌面 Tasker：拖开坞再点卡片，轨道不应右跳；空 Ctrl+I 后 Esc 不应留下时间戳。
+
+## 上一目标（已完成）
+
+**详情日志改成一整片编辑区（左时间、右正文）**（冻结包已重建）
 
 - 规格：`docs/superpowers/specs/2026-09-17-journal-single-editor-design.md`
 - 计划：`docs/superpowers/plans/2026-09-17-journal-single-editor.md`

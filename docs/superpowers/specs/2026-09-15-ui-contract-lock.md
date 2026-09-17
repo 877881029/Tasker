@@ -57,7 +57,7 @@ Locked geometry / chrome (not hex, still frozen):
 - Tasks: `tasks/<stable-id>.md`. Filename does not follow the title.
 - YAML keys (required): `title`, `state`, `resume_state`, `created_at`, `updated_at`.
 - `state`: only `pending` | `urgent` | `done`.
-- Body under YAML: reverse-chronological journal via `dump_journal` / `parse_journal`. Stamp `YYMMDD.hAM/PM`. Adjacent records separated by one blank line. `Ctrl+I` always **prepends** a new record (same hour ≠ merge) **and makes the whole journal editor writable**.
+- Body under YAML: reverse-chronological journal via `dump_journal` / `parse_journal`. Stamp `YYMMDD.hAM/PM`. Adjacent records separated by one blank line. `Ctrl+I` always **prepends** a new record (same hour ≠ merge) **and makes the whole journal editor writable**. A prepended record with no text is dropped on Ctrl+S / Esc.
 - Image/link paths in Markdown are not rewritten. Delete unlinks the `.md` only.
 - Clipboard-only PNG may be written under `tasks/<id>/`.
 
