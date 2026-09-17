@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from html import escape
 
-from PySide6.QtCore import QRect, QSize, Qt
+from PySide6.QtCore import QRect, QSize, Qt, QUrl
 from PySide6.QtGui import (
     QColor,
     QFont,
@@ -15,72 +15,61 @@ from PySide6.QtGui import (
     QTextCharFormat,
     QTextCursor,
 )
-from PySide6.QtWidgets import QFrame, QPlainTextEdit, QSizePolicy, QTextBrowser, QWidget
+from PySide6.QtWebEngineCore import QWebEngineSettings
+from PySide6.QtWebEngineWidgets import QWebEngineView
+from PySide6.QtWidgets import QFrame, QPlainTextEdit, QSizePolicy, QWidget
 
+from tasker.preview.md_visual import TaskerWebPage
 from tasker.theme import COBALT, INK, MUTED, PAPER, wrap_document_html
 
 
 def journal_document_html(entries: list[tuple[str, str]]) -> str:
-    rows: list[str] = []
+    cells: list[str] = []
     for index, (stamp, text) in enumerate(entries):
-        if index:
-            rows.append('<tr><td width="118"></td><td class="txt">&nbsp;</td></tr>')
         klass = " newest" if index == 0 else ""
         lines = escape(text or "").split("\n")
         body = "<br>".join(line if line else "&nbsp;" for line in lines)
-        rows.append(
-            "<tr>"
-            f'<td class="stamp{klass}" width="118" valign="top" align="right">{escape(stamp)}</td>'
-            f'<td class="txt" valign="top">{body}</td>'
-            "</tr>"
+        cells.append(
+            f'<div class="stamp{klass}">{escape(stamp)}</div>'
+            f'<div class="txt">{body}</div>'
         )
     extra = (
-        "body{padding:8px 12px 32px 0;font-size:16px;line-height:1.72}"
-        "table.rec{border:none;width:100%;margin:0;border-collapse:collapse}"
-        "td,th{border:none;padding:0}"
-        "td.stamp{width:118px;padding:0 12px 0 0;text-align:right;"
-        f"color:{MUTED};font-size:13px;font-weight:600}}"
-        f"td.newest{{color:{COBALT}}}"
-        f"td.txt{{color:{INK};font-size:16px;line-height:1.72}}"
+        "body{padding:8px 20px 32px 12px;font-size:16px;line-height:1.72;"
+        'font-family:Candara,Calibri,"Segoe UI",sans-serif}'
+        ".log{display:grid;grid-template-columns:7.75rem minmax(0,1fr);"
+        "column-gap:12px;row-gap:1.15em;align-items:start}"
+        f".stamp{{text-align:right;color:{MUTED};font-size:13px;font-weight:600;"
+        "line-height:1.72;white-space:nowrap}}"
+        f".stamp.newest{{color:{COBALT}}}"
+        f".txt{{color:{INK};font-size:16px;line-height:1.72;min-width:0;"
+        "overflow-wrap:anywhere}}"
     )
-    table = (
-        "<table class='rec' width='100%' cellspacing='0' cellpadding='0'>"
-        f"{''.join(rows)}</table>"
+    return wrap_document_html(
+        f'<div class="log">{"".join(cells)}</div>', extra_css=extra
     )
-    return wrap_document_html(table, extra_css=extra)
 
 
-class JournalDocumentView(QTextBrowser):
+class JournalDocumentView(QWebEngineView):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setObjectName("journalDocument")
-        self.setFrameShape(QFrame.Shape.NoFrame)
-        self.setOpenExternalLinks(True)
-        self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.setMinimumSize(0, 0)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-        self.setStyleSheet(
-            f"QTextBrowser#journalDocument{{background:{PAPER};border:none;color:{INK};}}"
+        page = TaskerWebPage(self)
+        page.setBackgroundColor(QColor(PAPER))
+        settings = page.settings()
+        settings.setAttribute(
+            QWebEngineSettings.WebAttribute.LocalContentCanAccessRemoteUrls, False
         )
-        pal = self.palette()
-        paper = QColor(PAPER)
-        ink = QColor(INK)
-        for group in (
-            QPalette.ColorGroup.Active,
-            QPalette.ColorGroup.Inactive,
-            QPalette.ColorGroup.Disabled,
-        ):
-            pal.setColor(group, QPalette.ColorRole.Base, paper)
-            pal.setColor(group, QPalette.ColorRole.Window, paper)
-            pal.setColor(group, QPalette.ColorRole.Text, ink)
-        self.setPalette(pal)
-        self.viewport().setPalette(pal)
-        self.setAutoFillBackground(True)
-        self.viewport().setAutoFillBackground(True)
+        settings.setFontFamily(QWebEngineSettings.FontFamily.StandardFont, "Candara")
+        settings.setFontFamily(QWebEngineSettings.FontFamily.SansSerifFont, "Candara")
+        settings.setFontSize(QWebEngineSettings.FontSize.DefaultFontSize, 16)
+        self.setPage(page)
         self._html = ""
 
     def set_entries(self, entries: list[tuple[str, str]]) -> None:
         self._html = journal_document_html(entries)
-        self.setHtml(self._html)
+        self.setHtml(self._html, QUrl())
 
     def document_html(self) -> str:
         return self._html

@@ -34,10 +34,20 @@ def test_journal_document_html_keeps_one_stamp_column():
             ("260916.2PM", "短记录"),
         ]
     )
-    assert html.count("<table") == 1
-    assert html.count("<tr>") == 3
-    assert 'width="118"' in html
+    assert "grid-template-columns" in html
+    assert html.count("class='log'") + html.count('class="log"') == 1
+    assert html.count("class='stamp") + html.count('class="stamp') == 2
+    assert "Candara" in html
+    assert "16px" in html
+    assert "1.72" in html
     assert html.index("260917.11AM") < html.index("260916.2PM")
+
+
+def test_journal_document_view_uses_chromium():
+    from PySide6.QtWebEngineWidgets import QWebEngineView
+    from tasker.shell.journal_edit import JournalDocumentView
+
+    assert issubclass(JournalDocumentView, QWebEngineView)
 
 
 def test_paste_image_writes_attachment(qtbot, tmp_path, monkeypatch):

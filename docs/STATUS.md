@@ -5,6 +5,18 @@ Git：`main` 应与 `origin/main` 同步（https://github.com/877881029/Tasker �
 
 ## 当前目标
 
+**只读日志改用 Reader 同一套 Chromium 渲染**（已完成，冻结包已重建）
+
+- 只读：`QWebEngineView` + `wrap_document_html`（Candara 16px / 行高 1.72 / `#1c1915`）
+- 时间戳一列 CSS grid（`7.75rem` + 正文 `minmax(0,1fr)`），折行不再挤进时间列
+- Ctrl+I 仍切回整篇 `JournalEditor`
+
+## 下一步
+
+双击桌面 Tasker：详情只读应与 Reader 文档同样字重、墨色；时间戳完整右对齐成一列，不应只剩「M」。
+
+## 上一目标（已完成）
+
 **只读日志时间戳对齐成一列**（已完成，冻结包已重建）
 
 - 一张表固定左列 118px；折行留在正文列，不再钻到时间下面
@@ -86,4 +98,4 @@ Tasker 是 Windows 桌面个人工作台。数据 `%LOCALAPPDATA%\Tasker\tasks\`
 
 ## 阻塞项
 
-- `git push origin main` 失败：`Permission to 877881029/Tasker.git denied to runqyang_amdeng`（本地已提交 `cb777ac`，未同步远程）
+- `git push origin main` 失败：`Permission to 877881029/Tasker.git denied to runqyang_amdeng`（本地已提交，未同步远程）
