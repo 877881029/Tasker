@@ -1,10 +1,16 @@
 from dataclasses import replace
 
-from PySide6.QtCore import QPoint, QRect, Qt
+from PySide6.QtCore import QEvent, QPoint, QRect, QSize, Qt
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtWidgets import QLabel, QSizePolicy, QToolButton
 
-from tasker.shell.window import default_extra_width, expand_from_dock, geometry_for_screen
+from tasker.shell.window import (
+    default_extra_width,
+    edge_hit,
+    expand_from_dock,
+    geometry_for_screen,
+    paper_action,
+)
 from tasker.store import Store
 from tasker.theme import DONE_BG, PAPER, dock_style
 
@@ -338,4 +344,25 @@ def test_dock_keeps_tray_icon(qtbot, tmp_path, monkeypatch):
     qtbot.addWidget(dock)
     assert isinstance(dock.tray, QSystemTrayIcon)
     assert not dock.tray.icon().isNull()
+
+
+def test_edge_hit_eight_ways():
+    size = QSize(400, 300)
+    assert edge_hit(QPoint(2, 150), size) & Qt.Edge.LeftEdge
+    assert edge_hit(QPoint(398, 150), size) & Qt.Edge.RightEdge
+    assert edge_hit(QPoint(200, 2), size) & Qt.Edge.TopEdge
+    assert edge_hit(QPoint(200, 298), size) & Qt.Edge.BottomEdge
+    corners = edge_hit(QPoint(1, 1), size)
+    assert corners & Qt.Edge.LeftEdge and corners & Qt.Edge.TopEdge
+    assert not bool(edge_hit(QPoint(200, 150), size))
+
+
+def test_paper_action_move_resize_or_ignore():
+    size = QSize(400, 300)
+    assert paper_action(QPoint(2, 150), size, "search") == "resize"
+    assert paper_action(QPoint(200, 150), size, "listHost") == "move"
+    assert paper_action(QPoint(200, 150), size, "chrome") == "move"
+    assert paper_action(QPoint(200, 150), size, "search") == "ignore"
+    assert paper_action(QPoint(200, 150), size, "itemCard") == "ignore"
+    assert paper_action(QPoint(200, 150), size, "journalDocument") == "ignore"
 

@@ -62,6 +62,53 @@ def expand_from_dock(collapsed: QRect, extra_width: int, avail: QRect) -> QRect:
     )
 
 
+FRAME_MARGIN = 8
+MOVE_NAMES = frozenset(
+    {"shell", "dock", "chrome", "listHost", "listScroll", "detailHost", "notch"}
+)
+IGNORE_NAMES = frozenset(
+    {
+        "search",
+        "addBtn",
+        "pinBtn",
+        "closeDock",
+        "itemCard",
+        "titleField",
+        "journalEditor",
+        "journalDocument",
+        "doneBox",
+        "importance",
+        "deleteBtn",
+    }
+)
+
+
+def edge_hit(pos: QPoint, size: QSize, margin: int = FRAME_MARGIN) -> Qt.Edges:
+    edges = Qt.Edges()
+    if pos.x() <= margin:
+        edges |= Qt.Edge.LeftEdge
+    if pos.x() >= size.width() - 1 - margin:
+        edges |= Qt.Edge.RightEdge
+    if pos.y() <= margin:
+        edges |= Qt.Edge.TopEdge
+    if pos.y() >= size.height() - 1 - margin:
+        edges |= Qt.Edge.BottomEdge
+    return edges
+
+
+def paper_action(
+    pos: QPoint, size: QSize, object_name: str, margin: int = FRAME_MARGIN
+) -> str:
+    if edge_hit(pos, size, margin):
+        return "resize"
+    name = object_name or ""
+    if name in IGNORE_NAMES:
+        return "ignore"
+    if name in MOVE_NAMES:
+        return "move"
+    return "ignore"
+
+
 class ItemCard(QWidget):
     def __init__(self, store: Store, item: Item, on_open, parent=None) -> None:
         super().__init__(parent)
@@ -277,6 +324,7 @@ class DockWindow(QWidget):
         self.refresh()
         self._icon_path = resource_path("assets", "icons", "tasker.ico")
         self._setup_tray()
+        self._arm_frame()
 
     def _frame_flags(self, pinned: bool) -> Qt.WindowType:
         flags = Qt.WindowType.Tool | Qt.WindowType.FramelessWindowHint
@@ -348,6 +396,46 @@ class DockWindow(QWidget):
         path.addRoundedRect(self.rect().adjusted(0, 0, -1, -1), 16, 16)
         self.setMask(QRegion(path.toFillPolygon().toPolygon()))
 
+    def _arm_frame(self) -> None:
+        self.setMinimumSize(320, 200)
+        self.setMouseTracking(True)
+        self.installEventFilter(self)
+        for child in self.findChildren(QWidget):
+            child.setMouseTracking(True)
+            child.installEventFilter(self)
+
+    def eventFilter(self, watched, event) -> bool:
+        if (
+            isinstance(event, QMouseEvent)
+            and event.type() == QEvent.Type.MouseButtonPress
+            and event.button() == Qt.MouseButton.LeftButton
+            and self._begin_frame_interaction(event)
+        ):
+            return True
+        return super().eventFilter(watched, event)
+
+    def _named_widget_at(self, local: QPoint) -> str:
+        widget = self.childAt(local)
+        while widget is not None:
+            name = widget.objectName()
+            if name:
+                return str(name)
+            widget = widget.parentWidget()
+        return str(self.objectName())
+
+    def _begin_frame_interaction(self, event: QMouseEvent) -> bool:
+        local = self.mapFromGlobal(event.globalPosition().toPoint())
+        name = self._named_widget_at(local)
+        action = paper_action(local, self.size(), name)
+        handle = self.windowHandle()
+        if handle is None:
+            return False
+        if action == "resize":
+            return bool(handle.startSystemResize(edge_hit(local, self.size())))
+        if action == "move":
+            return bool(handle.startSystemMove())
+        return False
+
     def _place(self, *, initial: bool = False) -> None:
         screen = QGuiApplication.primaryScreen()
         avail = screen.availableGeometry() if screen else QRect(0, 0, 1920, 1080)
@@ -363,7 +451,7 @@ class DockWindow(QWidget):
             return
         self.rail.setMinimumWidth(0)
         self.rail.setMaximumWidth(16777215)
-        self.setMinimumWidth(0)
+        self.setMinimumSize(320, 200)
         self.setMaximumWidth(16777215)
         if self._collapsed_geo is not None:
             self.setGeometry(self._collapsed_geo)
@@ -399,6 +487,7 @@ class DockWindow(QWidget):
             card = ItemCard(self._store, item, self.open_detail)
             card.set_selected(item.id == self._open_item_id)
             self.list_layout.addWidget(card)
+        self._arm_frame()
 
     def open_detail(self, item_id: str) -> None:
         item = self._store.get(item_id)
