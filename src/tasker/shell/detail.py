@@ -84,8 +84,8 @@ class DetailWindow(QWidget):
         self._store = store
         self._item_id: str | None = None
         self.setStyleSheet(
-            f"background:{PAPER};color:{INK};font-size:16px;"
-            "font-family:Candara,Calibri,'Segoe UI';"
+            f"background:{PAPER};color:{INK};font-size:12pt;"
+            "font-family:Candara,Calibri,\"Segoe UI\";"
         )
         if parent is None:
             self.setWindowTitle("详情")

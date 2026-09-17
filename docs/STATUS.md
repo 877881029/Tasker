@@ -5,7 +5,18 @@ Git：`main` 应与 `origin/main` 同步（https://github.com/877881029/Tasker �
 
 ## 当前目标
 
-**详情日志展开与排版打磨**（已完成，冻结包已重建）
+**日志正文对齐 Reader 墨色**（代码已合入，正在打冻结包）
+
+- 只读日志不再发灰：12pt Candara、行高 1.72、视口铺实纸色
+- 时间戳仍用 COBALT / MUTED，正文锁 `#1c1915`
+
+## 下一步
+
+双击桌面 Tasker：详情正文应与 Reader 文档一样深，不应发浅灰。
+
+## 上一目标（已完成）
+
+**详情日志展开与排版打磨**（冻结包已重建）
 
 - 规格：`docs/superpowers/specs/2026-09-17-detail-expand-journal-polish-design.md`
 - 点卡片从当前坞位置向左展开，轨道右缘不动

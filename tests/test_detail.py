@@ -2,14 +2,14 @@ from datetime import datetime
 from dataclasses import replace
 
 from PySide6.QtCore import QMimeData, QRect, Qt
-from PySide6.QtGui import QImage
+from PySide6.QtGui import QImage, QPalette
 
 from PySide6.QtWidgets import QPlainTextEdit
 from tasker.preview.md_edit import MarkdownEdit
 from tasker.preview.md_visual import render_markdown
 from tasker.shell.detail import DetailWindow, detail_geometry
 from tasker.store import Store
-from tasker.theme import wrap_document_html
+from tasker.theme import wrap_document_html, INK
 
 
 def test_detail_geometry_fills_left():
@@ -167,6 +167,28 @@ def test_journal_uses_reader_document_font(qtbot, tmp_path, monkeypatch):
     assert family in {"Candara", "Calibri", "Segoe UI"}
     assert win.journal.head_edit().gutter_font().family() == family
     assert win.journal.head_edit().font().weight() == win.journal.head_edit().gutter_font().weight()
+    assert win.journal.head_edit().font().pointSize() == 12
+    assert win.journal.head_edit().autoFillBackground()
+    assert win.journal.head_edit().viewport().autoFillBackground()
+
+
+def test_journal_readonly_body_uses_ink(qtbot, tmp_path, monkeypatch):
+    monkeypatch.setenv("TASKER_DATA_DIR", str(tmp_path))
+    store = Store(tmp_path)
+    item = store.save(replace(store.create(), body_md="260915.3PM\n\n旧记录"))
+    win = DetailWindow(store)
+    qtbot.addWidget(win)
+    win.load(item)
+    edit = win.journal.head_edit()
+    assert edit.isReadOnly()
+    pal = edit.palette()
+    for group in (
+        QPalette.ColorGroup.Active,
+        QPalette.ColorGroup.Inactive,
+        QPalette.ColorGroup.Disabled,
+    ):
+        assert pal.color(group, QPalette.ColorRole.Text).name() == INK
+        assert edit.viewport().palette().color(group, QPalette.ColorRole.Text).name() == INK
 
 
 def test_journal_is_one_scrolling_editor(qtbot, tmp_path, monkeypatch):
