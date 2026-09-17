@@ -57,7 +57,7 @@ Locked geometry / chrome (not hex, still frozen):
 - Tasks: `tasks/<stable-id>.md`. Filename does not follow the title.
 - YAML keys (required): `title`, `state`, `resume_state`, `created_at`, `updated_at`.
 - `state`: only `pending` | `urgent` | `done`.
-- Body under YAML: reverse-chronological journal via `dump_journal` / `parse_journal`. Stamp `YYMMDD.hAM/PM`. Adjacent records separated by one blank line. `Ctrl+I` always **prepends** a new record (same hour ≠ merge).
+- Body under YAML: reverse-chronological journal via `dump_journal` / `parse_journal`. Stamp `YYMMDD.hAM/PM`. Adjacent records separated by one blank line. `Ctrl+I` always **prepends** a new record (same hour ≠ merge) **and makes the whole journal editor writable**.
 - Image/link paths in Markdown are not rewritten. Delete unlinks the `.md` only.
 - Clipboard-only PNG may be written under `tasks/<id>/`.
 
@@ -125,13 +125,14 @@ List order locked: urgent, then pending, then done; within a group newest `updat
 
 - Embedded in `detail_host` (not a second `Qt.Tool` window when parented).
 - Header: importance 32px dot, title, 完成, 删除. **No** 保存 / 关闭 buttons.
-- Journal open = read-only. `Ctrl+I` → `begin_write`. `Ctrl+S` → `save_keep_open` (write file, stay open, read-only). `Esc` → `close_detail` (save + hide bubble).
+- Journal open = read-only. `Ctrl+I` → `begin_write` (prepend a new record and make the **whole** editor writable). `Ctrl+S` → `save_keep_open` (write file, stay open, read-only). `Esc` → `close_detail` (save + hide bubble).
 - Title / dot / done write YAML immediately.
 - Public: `load(item)`, `begin_write()`, `save_keep_open()`, `save_all()`, `close_detail()`, `delete_item()`, signal `closed`.
 - `expanded_geometry(avail) -> QRect` fills available screen.
 
 **`JournalPane`**
 
+- One wrapped editor plus a 118px timestamp gutter (stamps are not duplicated in the body). Not one widget per record.
 - `load(body)`, `collect() -> str`, `latest_status() -> str`, `begin_write(when=None)`, `set_all_readonly()`, `head_edit()`.
 
 ### 3.6 App / IPC

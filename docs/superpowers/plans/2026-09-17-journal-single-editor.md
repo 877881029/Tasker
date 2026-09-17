@@ -44,7 +44,7 @@
   - `JournalPane.head_edit() -> JournalEditor` (still a `QPlainTextEdit`)
   - `JournalPane.begin_write(when=None)` prepends then `setReadOnly(False)` on the one editor
 
-- [ ] **Step 1: Write the failing tests** in `tests/test_detail.py` (replace journal-widget assertions)
+- [x] **Step 1: Write the failing tests** in `tests/test_detail.py` (replace journal-widget assertions)
 
 ```python
 def _insert_head(win, text: str) -> None:
@@ -200,7 +200,7 @@ Also change `tests/test_window.py` `test_detail_save_and_close`:
 
 Keep `test_detail_geometry_fills_left`, markdown/paste, image path, cycle/delete tests as they are.
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 ```
 .\.venv\Scripts\python.exe -m pytest tests/test_detail.py::test_open_is_readonly_until_ctrl_i tests/test_detail.py::test_ctrl_i_can_edit_older_record tests/test_detail.py::test_journal_is_one_scrolling_editor -q --tb=short
@@ -208,7 +208,7 @@ Keep `test_detail_geometry_fills_left`, markdown/paste, image path, cycle/delete
 
 Expected: FAIL (`entries` / `gutter` missing, or `len(editors) != 1`, or `_rows` still used).
 
-- [ ] **Step 3: Write `journal_edit.py` and slim `JournalPane`**
+- [x] **Step 3: Write `journal_edit.py` and slim `JournalPane`**
 
 `JournalEditor` copies Reader `CodeEditor` extra-area wiring (`blockCountChanged`, `updateRequest`, `resizeEvent`, `setViewportMargins`) but:
 
@@ -247,7 +247,7 @@ def head_edit(self) -> QPlainTextEdit:
     return self.editor
 ```
 
-- [ ] **Step 4: Run tests GREEN**
+- [x] **Step 4: Run tests GREEN**
 
 ```
 .\.venv\Scripts\python.exe -m pytest tests/test_detail.py tests/test_window.py -q --tb=short
@@ -255,7 +255,7 @@ def head_edit(self) -> QPlainTextEdit:
 
 Expected: PASS. Then full `.\.venv\Scripts\python.exe -m pytest -q`.
 
-- [ ] **Step 5: Patch the UI contract**
+- [x] **Step 5: Patch the UI contract**
 
 In `docs/superpowers/specs/2026-09-15-ui-contract-lock.md`:
 
@@ -263,7 +263,7 @@ In `docs/superpowers/specs/2026-09-15-ui-contract-lock.md`:
 - DetailWindow bullet: `Ctrl+I` → `begin_write` (prepend + whole editor writable).
 - JournalPane: one editor + timestamp gutter; public methods unchanged.
 
-- [ ] **Step 6: Commit, freeze, STATUS**
+- [x] **Step 6: Commit, freeze, STATUS**
 
 ```
 git add src/tasker/shell/journal_edit.py src/tasker/shell/detail.py tests/test_detail.py tests/test_window.py docs/superpowers/specs/2026-09-15-ui-contract-lock.md docs/STATUS.md

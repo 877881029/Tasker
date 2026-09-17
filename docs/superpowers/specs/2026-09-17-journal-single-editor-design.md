@@ -1,7 +1,7 @@
 # Journal as one continuous editor (timestamp gutter)
 
 Date: 2026-09-17  
-Status: Approved in chat (approach 1: single `QPlainTextEdit` + left timestamp extra area)  
+Status: Implemented  
 Progress ledger: `docs/STATUS.md`
 
 ## 1. Goal

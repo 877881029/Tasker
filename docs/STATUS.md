@@ -5,15 +5,15 @@ Git：`main` 应与 `origin/main` 同步（https://github.com/877881029/Tasker �
 
 ## 当前目标
 
-**详情日志改成一整片编辑区（左时间、右正文）**（计划已写，正在实现）
+**详情日志改成一整片编辑区（左时间、右正文）**（代码已合入，正在打冻结包）
 
 - 规格：`docs/superpowers/specs/2026-09-17-journal-single-editor-design.md`
 - 计划：`docs/superpowers/plans/2026-09-17-journal-single-editor.md`
-- 用户确认：方案 1；Ctrl+I 仍新开一条空记录；整篇（含新空位）同一编辑器可改
+- 阅读区一个折行编辑器，左侧时间 gutter；Ctrl+I 仍新开空记录，之后整篇可改
 
 ## 下一步
 
-双击桌面 Tasker：打开较长日志，末行应完整可见，不应只露出半行。
+双击桌面 Tasker：打开详情，Ctrl+I 后应能改旧记录；长文折行不再切半行。
 
 ## 上一目标（已完成）
 

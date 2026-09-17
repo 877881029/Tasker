@@ -2,17 +2,14 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from PySide6.QtCore import QEvent, QRect, QTimer, Qt, Signal
+from PySide6.QtCore import QRect, Qt, Signal
 from PySide6.QtGui import QCloseEvent, QFont, QIcon, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QCheckBox,
     QHBoxLayout,
-    QLabel,
     QLineEdit,
     QPlainTextEdit,
     QPushButton,
-    QScrollArea,
-    QSizePolicy,
     QToolButton,
     QVBoxLayout,
     QWidget,
@@ -20,8 +17,9 @@ from PySide6.QtWidgets import (
 
 from tasker.journal import dump_journal, parse_journal, prepend_record
 from tasker.resources import resource_path
+from tasker.shell.journal_edit import JournalEditor
 from tasker.store import Item, Store
-from tasker.theme import COBALT, DONE_DOT, INK, MUTED, PAPER, PENDING_DOT, URGENT_DOT
+from tasker.theme import DONE_DOT, INK, PAPER, PENDING_DOT, URGENT_DOT
 
 
 def detail_geometry(avail: QRect, dock_width: int) -> QRect:
@@ -39,152 +37,39 @@ class JournalPane(QWidget):
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
         self.setObjectName("journal")
-        self._fit_tick = 0
-        self._fitting = False
-        self._rows: list[tuple[QLabel, QPlainTextEdit]] = []
-        self._host = QWidget()
-        self._list = QVBoxLayout(self._host)
-        self._list.setContentsMargins(0, 0, 8, 8)
-        self._list.setSpacing(0)
-        self._list.setAlignment(Qt.AlignmentFlag.AlignTop)
-        self.scroll = QScrollArea()
-        self.scroll.setWidgetResizable(True)
-        self.scroll.setWidget(self._host)
-        self.scroll.setFrameShape(QScrollArea.Shape.NoFrame)
-        self.scroll.setStyleSheet(f"background:{PAPER};border:none;")
+        self.editor = JournalEditor(self)
+        self.editor.textChanged.connect(self.changed)
         root = QVBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
-        root.addWidget(self.scroll)
+        root.addWidget(self.editor)
 
     def load(self, body: str, when: datetime | None = None) -> None:
-        self._rebuild(parse_journal(body), writable_head=False)
+        self.editor.load_entries(parse_journal(body))
+        self.editor.setReadOnly(True)
 
     def collect(self) -> str:
-        return dump_journal(self._from_ui())
+        return dump_journal(self.editor.entries())
 
     def latest_status(self) -> str:
-        entries = self._from_ui()
+        entries = self.editor.entries()
         if not entries:
             return ""
         return entries[0][1].strip().splitlines()[0] if entries[0][1].strip() else ""
 
     def head_edit(self) -> QPlainTextEdit:
-        return self._rows[0][1]
+        return self.editor
 
     def begin_write(self, when: datetime | None = None) -> None:
         moment = when or datetime.now()
-        self._rebuild(prepend_record(self._from_ui(), moment), writable_head=True)
-        self._focus_head()
+        self.editor.load_entries(prepend_record(self.editor.entries(), moment))
+        self.editor.setReadOnly(False)
+        self.editor.setFocus()
+        cursor = self.editor.textCursor()
+        cursor.movePosition(cursor.MoveOperation.Start)
+        self.editor.setTextCursor(cursor)
 
     def set_all_readonly(self) -> None:
-        for _label, editor in self._rows:
-            editor.setReadOnly(True)
-
-    def _from_ui(self) -> list[tuple[str, str]]:
-        return [(label.text(), edit.toPlainText()) for label, edit in self._rows]
-
-    def _rebuild(self, entries: list[tuple[str, str]], *, writable_head: bool) -> None:
-        while self._list.count():
-            child = self._list.takeAt(0)
-            if child.widget():
-                child.widget().deleteLater()
-        self._rows = []
-        for stamp, text in entries:
-            row = QWidget()
-            row.setStyleSheet(f"background:{PAPER};")
-            line = QHBoxLayout(row)
-            line.setContentsMargins(0, 0, 0, 0)
-            line.setSpacing(12)
-            gutter = QLabel(stamp)
-            gutter.setFixedWidth(118)
-            gutter.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignTop)
-            color = COBALT if not self._rows else MUTED
-            gutter.setStyleSheet(
-                f"color:{color};font-family:Consolas,'Cascadia Mono',monospace;"
-                "font-size:13px;font-weight:600;padding-top:4px;"
-            )
-            editor = QPlainTextEdit()
-            editor.setPlainText(text)
-            editor.setFrameShape(QPlainTextEdit.Shape.NoFrame)
-            editor.setStyleSheet(
-                f"QPlainTextEdit{{background:{PAPER};color:{INK};border:none;font-size:15px;}}"
-            )
-            editor.setPlaceholderText("记录…")
-            editor.setReadOnly(not (writable_head and not self._rows))
-            editor.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-            editor.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-            editor.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-            editor.setLineWrapMode(QPlainTextEdit.LineWrapMode.WidgetWidth)
-            editor.installEventFilter(self)
-            editor.textChanged.connect(lambda _=False, box=editor: self._fit_editor(box))
-            row.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Maximum)
-            line.addWidget(gutter, 0)
-            line.addWidget(editor, 1)
-            self._list.addWidget(row)
-            self._rows.append((gutter, editor))
-            self._fit_editor(editor)
-        line_gap = 0
-        if self._rows:
-            line_gap = self._rows[0][1].fontMetrics().lineSpacing() * 2
-        self._list.setSpacing(line_gap)
-        self._fit_tick += 1
-        tick = self._fit_tick
-        QTimer.singleShot(0, lambda t=tick: self._fit_all(t))
-
-    def eventFilter(self, watched, event) -> bool:
-        if (
-            not self._fitting
-            and event.type() == QEvent.Type.Resize
-            and isinstance(watched, QPlainTextEdit)
-        ):
-            self._fit_editor(watched)
-        return super().eventFilter(watched, event)
-
-    def _fit_all(self, tick: int) -> None:
-        if tick != self._fit_tick:
-            return
-        for _gutter, editor in self._rows:
-            self._fit_editor(editor)
-
-    def _fit_editor(self, editor: QPlainTextEdit) -> None:
-        if self._fitting:
-            return
-        try:
-            editor.document()
-        except RuntimeError:
-            return
-        metrics = editor.fontMetrics()
-        line = metrics.lineSpacing()
-        viewport_w = editor.viewport().width()
-        if viewport_w < 40:
-            return
-        self._fitting = True
-        try:
-            editor.document().setDocumentMargin(4)
-            editor.document().setTextWidth(float(viewport_w))
-            doc_h = int(editor.document().size().height() + 0.999)
-            extra = (
-                metrics.descent()
-                + editor.frameWidth() * 2
-                + editor.contentsMargins().top()
-                + editor.contentsMargins().bottom()
-                + 4
-            )
-            height = max(line * 2, doc_h + extra)
-            if editor.height() != height:
-                editor.setFixedHeight(height)
-        finally:
-            self._fitting = False
-
-    def _focus_head(self) -> None:
-        if not self._rows:
-            return
-        edit = self._rows[0][1]
-        edit.setFocus()
-        cursor = edit.textCursor()
-        cursor.movePosition(cursor.MoveOperation.Start)
-        edit.setTextCursor(cursor)
-        self.scroll.verticalScrollBar().setValue(0)
+        self.editor.setReadOnly(True)
 
 
 class DetailWindow(QWidget):

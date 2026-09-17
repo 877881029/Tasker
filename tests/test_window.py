@@ -118,7 +118,9 @@ def test_detail_save_and_close(qtbot, tmp_path, monkeypatch):
     assert dock._detail.delete_btn.text() == "删除"
     dock._detail.title_edit.setText("可关闭的任务")
     dock._detail.begin_write()
-    dock._detail.journal.head_edit().setPlainText("正文")
+    cursor = dock._detail.journal.head_edit().textCursor()
+    cursor.insertText("正文")
+    dock._detail.journal.head_edit().setTextCursor(cursor)
     dock._detail.save_keep_open()
     loaded = store.get(item.id)
     assert loaded is not None
