@@ -5,7 +5,7 @@ Git：`main` 应与 `origin/main` 同步（https://github.com/877881029/Tasker �
 
 ## 当前目标
 
-**详情日志展开与排版打磨**（代码已合入，正在打冻结包）
+**详情日志展开与排版打磨**（已完成，冻结包已重建）
 
 - 规格：`docs/superpowers/specs/2026-09-17-detail-expand-journal-polish-design.md`
 - 点卡片从当前坞位置向左展开，轨道右缘不动
