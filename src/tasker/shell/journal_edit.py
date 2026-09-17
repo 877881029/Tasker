@@ -23,24 +23,31 @@ from tasker.theme import COBALT, INK, MUTED, PAPER, wrap_document_html
 def journal_document_html(entries: list[tuple[str, str]]) -> str:
     rows: list[str] = []
     for index, (stamp, text) in enumerate(entries):
+        if index:
+            rows.append('<tr><td width="118"></td><td class="txt">&nbsp;</td></tr>')
         klass = " newest" if index == 0 else ""
         lines = escape(text or "").split("\n")
         body = "<br>".join(line if line else "&nbsp;" for line in lines)
         rows.append(
-            "<table class='rec' width='100%' cellspacing='0' cellpadding='0'>"
-            f"<tr><td class='stamp{klass}' valign='top'>{escape(stamp)}</td>"
-            f"<td class='txt' valign='top'>{body}</td></tr></table>"
+            "<tr>"
+            f'<td class="stamp{klass}" width="118" valign="top" align="right">{escape(stamp)}</td>'
+            f'<td class="txt" valign="top">{body}</td>'
+            "</tr>"
         )
     extra = (
         "body{padding:8px 12px 32px 0;font-size:16px;line-height:1.72}"
-        "table.rec{border:none;margin:0 0 1.15em;width:100%}"
+        "table.rec{border:none;width:100%;margin:0;border-collapse:collapse}"
         "td,th{border:none;padding:0}"
-        "td.stamp{width:118px;padding-right:12px;text-align:right;"
+        "td.stamp{width:118px;padding:0 12px 0 0;text-align:right;"
         f"color:{MUTED};font-size:13px;font-weight:600}}"
         f"td.newest{{color:{COBALT}}}"
         f"td.txt{{color:{INK};font-size:16px;line-height:1.72}}"
     )
-    return wrap_document_html("".join(rows), extra_css=extra)
+    table = (
+        "<table class='rec' width='100%' cellspacing='0' cellpadding='0'>"
+        f"{''.join(rows)}</table>"
+    )
+    return wrap_document_html(table, extra_css=extra)
 
 
 class JournalDocumentView(QTextBrowser):

@@ -8,6 +8,7 @@ from PySide6.QtWidgets import QPlainTextEdit
 from tasker.preview.md_edit import MarkdownEdit
 from tasker.preview.md_visual import render_markdown
 from tasker.shell.detail import DetailWindow, detail_geometry
+from tasker.shell.journal_edit import journal_document_html
 from tasker.store import Store
 from tasker.theme import wrap_document_html, INK
 
@@ -24,6 +25,19 @@ def test_render_markdown_escapes_raw_html_and_links():
     assert "<script>" not in html
     assert "https://example.com" in html
     assert wrap_document_html("<p>x</p>").startswith("<!DOCTYPE html>")
+
+
+def test_journal_document_html_keeps_one_stamp_column():
+    html = journal_document_html(
+        [
+            ("260917.11AM", "已经合并了很长的一行文字需要折行到第二行"),
+            ("260916.2PM", "短记录"),
+        ]
+    )
+    assert html.count("<table") == 1
+    assert html.count("<tr>") == 3
+    assert 'width="118"' in html
+    assert html.index("260917.11AM") < html.index("260916.2PM")
 
 
 def test_paste_image_writes_attachment(qtbot, tmp_path, monkeypatch):
