@@ -1,6 +1,7 @@
 from dataclasses import replace
 
 from PySide6.QtCore import QPoint, QRect, Qt
+from PySide6.QtGui import QGuiApplication
 from PySide6.QtWidgets import QLabel, QSizePolicy, QToolButton
 
 from tasker.shell.window import default_extra_width, expand_from_dock, geometry_for_screen
@@ -232,6 +233,33 @@ def test_detail_is_embedded_and_follows_dock_move(qtbot, tmp_path, monkeypatch):
     assert not dock.detail_host.isVisible()
     assert not dock._detail.isVisible()
     assert dock.width() == collapsed
+
+
+def test_open_detail_does_not_move_parked_rail(qtbot, tmp_path, monkeypatch):
+    monkeypatch.setenv("TASKER_DATA_DIR", str(tmp_path))
+    from tasker.shell.window import DockWindow
+
+    store = Store(tmp_path / "tasker.sqlite")
+    item = store.save(replace(store.create(), title="停在这"))
+    dock = DockWindow(store)
+    qtbot.addWidget(dock)
+    dock.show()
+    avail = QGuiApplication.primaryScreen().availableGeometry()
+    parked = QRect(avail.x() + max(avail.width() - 480, 720), avail.y() + 80, 400, 640)
+    dock.setGeometry(parked)
+    qtbot.wait(20)
+    parked = QRect(dock.geometry())
+    dock.open_detail(item.id)
+    qtbot.wait(20)
+    expected = expand_from_dock(parked, default_extra_width(parked), avail)
+    assert dock.geometry() == expected
+    assert dock.x() + dock.width() == parked.x() + parked.width()
+    assert dock.y() == parked.y()
+    assert dock.height() == parked.height()
+    assert dock.rail.width() == parked.width()
+    dock._detail.close_detail()
+    qtbot.wait(20)
+    assert dock.geometry() == parked
 
 
 def test_closing_detail_keeps_moved_dock_position(qtbot, tmp_path, monkeypatch):
