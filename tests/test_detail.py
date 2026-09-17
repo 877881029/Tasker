@@ -172,6 +172,23 @@ def test_journal_uses_reader_document_font(qtbot, tmp_path, monkeypatch):
     assert win.journal.head_edit().viewport().autoFillBackground()
 
 
+def test_readonly_journal_uses_reader_document_css(qtbot, tmp_path, monkeypatch):
+    monkeypatch.setenv("TASKER_DATA_DIR", str(tmp_path))
+    store = Store(tmp_path)
+    item = store.save(replace(store.create(), body_md="260915.3PM\n\n旧记录"))
+    win = DetailWindow(store)
+    qtbot.addWidget(win)
+    win.load(item)
+    html = win.journal.document_html()
+    assert "Candara" in html
+    assert "1.72" in html
+    assert "16px" in html
+    assert INK.lstrip("#") in html.lower() or INK in html
+    assert win.journal.stack.currentWidget() is win.journal.document_view
+    win.begin_write()
+    assert win.journal.stack.currentWidget() is win.journal.editor
+
+
 def test_journal_readonly_body_uses_ink(qtbot, tmp_path, monkeypatch):
     monkeypatch.setenv("TASKER_DATA_DIR", str(tmp_path))
     store = Store(tmp_path)
@@ -209,7 +226,9 @@ def test_journal_is_one_scrolling_editor(qtbot, tmp_path, monkeypatch):
     edit = win.journal.head_edit()
     assert len(win.journal.findChildren(QPlainTextEdit)) == 1
     assert edit.gutter().width() == 118
-    assert edit.height() == win.journal.height()
+    visible = win.journal.stack.currentWidget()
+    assert visible is win.journal.document_view
+    assert visible.height() == win.journal.height()
     assert edit.maximumHeight() > 10000
 
 

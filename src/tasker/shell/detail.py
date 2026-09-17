@@ -10,6 +10,7 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QPlainTextEdit,
     QPushButton,
+    QStackedWidget,
     QToolButton,
     QVBoxLayout,
     QWidget,
@@ -17,7 +18,7 @@ from PySide6.QtWidgets import (
 
 from tasker.journal import dump_journal, parse_journal, prepend_record
 from tasker.resources import resource_path
-from tasker.shell.journal_edit import JournalEditor
+from tasker.shell.journal_edit import JournalDocumentView, JournalEditor
 from tasker.store import Item, Store
 from tasker.theme import DONE_DOT, INK, PAPER, PENDING_DOT, URGENT_DOT
 
@@ -39,13 +40,17 @@ class JournalPane(QWidget):
         self.setObjectName("journal")
         self.editor = JournalEditor(self)
         self.editor.textChanged.connect(self.changed)
+        self.document_view = JournalDocumentView(self)
+        self.stack = QStackedWidget(self)
+        self.stack.addWidget(self.document_view)
+        self.stack.addWidget(self.editor)
         root = QVBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
-        root.addWidget(self.editor)
+        root.addWidget(self.stack)
 
     def load(self, body: str, when: datetime | None = None) -> None:
         self.editor.load_entries(parse_journal(body))
-        self.editor.setReadOnly(True)
+        self._show_document()
 
     def collect(self) -> str:
         return dump_journal(self._filled_entries())
@@ -63,6 +68,7 @@ class JournalPane(QWidget):
         moment = when or datetime.now()
         self.editor.load_entries(prepend_record(self.editor.entries(), moment))
         self.editor.setReadOnly(False)
+        self.stack.setCurrentWidget(self.editor)
         self.editor.setFocus()
         cursor = self.editor.textCursor()
         cursor.movePosition(cursor.MoveOperation.Start)
@@ -70,7 +76,15 @@ class JournalPane(QWidget):
 
     def set_all_readonly(self) -> None:
         self.editor.load_entries(self._filled_entries())
+        self._show_document()
+
+    def document_html(self) -> str:
+        return self.document_view.document_html()
+
+    def _show_document(self) -> None:
         self.editor.setReadOnly(True)
+        self.document_view.set_entries(self._filled_entries())
+        self.stack.setCurrentWidget(self.document_view)
 
     def _filled_entries(self) -> list[tuple[str, str]]:
         return [(stamp, text) for stamp, text in self.editor.entries() if text.strip()]
