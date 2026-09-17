@@ -262,6 +262,35 @@ def test_open_detail_does_not_move_parked_rail(qtbot, tmp_path, monkeypatch):
     assert dock.geometry() == parked
 
 
+def test_open_detail_reuses_resized_extra_width(qtbot, tmp_path, monkeypatch):
+    monkeypatch.setenv("TASKER_DATA_DIR", str(tmp_path))
+    from tasker.shell.window import DockWindow
+
+    store = Store(tmp_path / "tasker.sqlite")
+    item = store.save(replace(store.create(), title="记住宽"))
+    dock = DockWindow(store)
+    qtbot.addWidget(dock)
+    dock.show()
+    avail = QGuiApplication.primaryScreen().availableGeometry()
+    parked = QRect(avail.x() + max(avail.width() - 480, 900), avail.y() + 80, 360, 600)
+    dock.setGeometry(parked)
+    qtbot.wait(20)
+    parked = QRect(dock.geometry())
+    dock.open_detail(item.id)
+    qtbot.wait(20)
+    extra = 500
+    resized = expand_from_dock(parked, extra, avail)
+    dock.setGeometry(resized)
+    qtbot.wait(20)
+    dock._detail.close_detail()
+    qtbot.wait(20)
+    dock.open_detail(item.id)
+    qtbot.wait(20)
+    assert dock.geometry() == expand_from_dock(parked, extra, avail)
+    assert dock.x() + dock.width() == parked.x() + parked.width()
+    assert dock.rail.width() == parked.width()
+
+
 def test_closing_detail_keeps_moved_dock_position(qtbot, tmp_path, monkeypatch):
     monkeypatch.setenv("TASKER_DATA_DIR", str(tmp_path))
     from tasker.shell.window import DockWindow

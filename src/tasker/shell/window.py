@@ -323,6 +323,25 @@ class DockWindow(QWidget):
     def resizeEvent(self, event) -> None:
         super().resizeEvent(event)
         self._apply_round_mask()
+        self._capture_expanded_layout()
+
+    def moveEvent(self, event) -> None:
+        super().moveEvent(event)
+        self._capture_expanded_layout()
+
+    def _capture_expanded_layout(self) -> None:
+        if not self.detail_host.isVisible():
+            return
+        rail_w = self.rail.width()
+        if rail_w <= 0:
+            return
+        self._extra_width = max(0, self.width() - rail_w)
+        self._collapsed_geo = QRect(
+            self.x() + self.width() - rail_w,
+            self.y(),
+            rail_w,
+            self.height(),
+        )
 
     def _apply_round_mask(self) -> None:
         path = QPainterPath()
