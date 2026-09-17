@@ -5,14 +5,11 @@ Git：`main` 应与 `origin/main` 同步（https://github.com/877881029/Tasker �
 
 ## 当前目标
 
-**详情日志改成一整片编辑区（左时间、右正文）**（规格已写，待用户审阅后出计划）
+**详情日志改成一整片编辑区（左时间、右正文）**（计划已写，正在实现）
 
 - 规格：`docs/superpowers/specs/2026-09-17-journal-single-editor-design.md`
+- 计划：`docs/superpowers/plans/2026-09-17-journal-single-editor.md`
 - 用户确认：方案 1；Ctrl+I 仍新开一条空记录；整篇（含新空位）同一编辑器可改
-- 下一步：用户审阅规格 → 写 TDD 计划 → 实现（重打冻结包）
-
-- 编辑框按真实视口宽度折行，高度含 descent / 边距，窗口变宽后会重算
-- 条目间距仍约为两行字高
 
 ## 下一步
 
