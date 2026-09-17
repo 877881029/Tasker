@@ -5,7 +5,7 @@ Git：`main` 应与 `origin/main` 同步（https://github.com/877881029/Tasker �
 
 ## 当前目标
 
-**日志正文对齐 Reader 墨色**（代码已合入，正在打冻结包）
+**日志正文对齐 Reader 墨色**（已完成，冻结包已重建）
 
 - 只读日志不再发灰：12pt Candara、行高 1.72、视口铺实纸色
 - 时间戳仍用 COBALT / MUTED，正文锁 `#1c1915`
