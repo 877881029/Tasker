@@ -3,7 +3,7 @@ from dataclasses import replace
 from PySide6.QtCore import QPoint, QRect, Qt
 from PySide6.QtWidgets import QLabel, QSizePolicy, QToolButton
 
-from tasker.shell.window import expand_from_dock, geometry_for_screen
+from tasker.shell.window import default_extra_width, expand_from_dock, geometry_for_screen
 from tasker.store import Store
 from tasker.theme import DONE_BG, PAPER, dock_style
 
@@ -16,14 +16,32 @@ def test_geometry_is_right_third():
     assert geo.height() == 800
 
 
-def test_expand_from_dock_keeps_rail_right_edge():
+def test_expand_from_dock_grows_left_by_extra():
     avail = QRect(0, 0, 1920, 1080)
-    collapsed = QRect(400, 40, 480, 800)
-    geo = expand_from_dock(collapsed, avail)
-    assert geo.x() == 0
-    assert geo.y() == 40
-    assert geo.height() == 800
+    collapsed = QRect(1000, 40, 400, 800)
+    geo = expand_from_dock(collapsed, 800, avail)
+    assert geo == QRect(200, 40, 1200, 800)
     assert geo.x() + geo.width() == collapsed.x() + collapsed.width()
+    assert geo.y() == collapsed.y()
+    assert geo.height() == collapsed.height()
+
+
+def test_expand_from_dock_clamps_to_screen_left():
+    avail = QRect(0, 0, 1920, 1080)
+    collapsed = QRect(300, 80, 400, 700)
+    geo = expand_from_dock(collapsed, 800, avail)
+    assert geo == QRect(0, 80, 700, 700)
+
+
+def test_expand_from_dock_zero_extra_when_on_left_edge():
+    avail = QRect(0, 0, 1920, 1080)
+    collapsed = QRect(0, 20, 400, 600)
+    geo = expand_from_dock(collapsed, 800, avail)
+    assert geo == collapsed
+
+
+def test_default_extra_width_is_twice_rail():
+    assert default_extra_width(QRect(100, 0, 400, 800)) == 800
 
 
 def test_add_search_done_and_color(qtbot, tmp_path, monkeypatch):

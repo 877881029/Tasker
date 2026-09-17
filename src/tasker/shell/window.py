@@ -46,14 +46,20 @@ def geometry_for_screen(avail: QRect) -> QRect:
     return QRect(x, avail.y(), width, avail.height())
 
 
-def expand_from_dock(collapsed: QRect, avail: QRect) -> QRect:
-    right = collapsed.x() + collapsed.width()
-    x = avail.x()
-    width = right - x
-    if width < collapsed.width():
-        x = collapsed.x()
-        width = collapsed.width()
-    return QRect(x, collapsed.y(), width, collapsed.height())
+def default_extra_width(collapsed: QRect) -> int:
+    return max(0, collapsed.width() * 2)
+
+
+def expand_from_dock(collapsed: QRect, extra_width: int, avail: QRect) -> QRect:
+    extra = max(int(extra_width), 0)
+    room = collapsed.x() - avail.x()
+    extra = min(extra, max(room, 0))
+    return QRect(
+        collapsed.x() - extra,
+        collapsed.y(),
+        collapsed.width() + extra,
+        collapsed.height(),
+    )
 
 
 class ItemCard(QWidget):
@@ -155,6 +161,7 @@ class DockWindow(QWidget):
         self._detail: DetailWindow | None = None
         self._open_item_id: str | None = None
         self._collapsed_geo: QRect | None = None
+        self._extra_width: int | None = None
         self._active_draft_id: str | None = None
         self.setWindowTitle("Tasker")
         self.setObjectName("dock")
@@ -327,8 +334,13 @@ class DockWindow(QWidget):
         avail = screen.availableGeometry() if screen else QRect(0, 0, 1920, 1080)
         if self.detail_host.isVisible():
             collapsed = self._collapsed_geo or QRect(self.geometry())
+            extra = (
+                self._extra_width
+                if self._extra_width is not None
+                else default_extra_width(collapsed)
+            )
             self.rail.setFixedWidth(collapsed.width())
-            self.setGeometry(expand_from_dock(collapsed, avail))
+            self.setGeometry(expand_from_dock(collapsed, extra, avail))
             return
         self.rail.setMinimumWidth(0)
         self.rail.setMaximumWidth(16777215)
