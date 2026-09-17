@@ -5,7 +5,7 @@ Git：`main` 应与 `origin/main` 同步（https://github.com/877881029/Tasker �
 
 ## 当前目标
 
-**详情日志改成一整片编辑区（左时间、右正文）**（代码已合入，正在打冻结包）
+**详情日志改成一整片编辑区（左时间、右正文）**（已完成，冻结包已重建）
 
 - 规格：`docs/superpowers/specs/2026-09-17-journal-single-editor-design.md`
 - 计划：`docs/superpowers/plans/2026-09-17-journal-single-editor.md`
