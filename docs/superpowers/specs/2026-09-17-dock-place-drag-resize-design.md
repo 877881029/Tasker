@@ -1,7 +1,7 @@
 # Dock stays put; drag and resize the paper window
 
 Date: 2026-09-17  
-Status: Draft pending user review  
+Status: Approved; implementing  
 Progress ledger: `docs/STATUS.md`
 
 ## 1. Goal
