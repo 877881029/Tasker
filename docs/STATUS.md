@@ -5,7 +5,7 @@ Git：`main` 应与 `origin/main` 同步（https://github.com/877881029/Tasker �
 
 ## 当前目标
 
-**打开详情不挪任务栏；纸窗可拖可缩放**（实现中）
+**打开详情不挪任务栏；纸窗可拖可缩放**（已完成，冻结包已重建）
 
 - 规格：`docs/superpowers/specs/2026-09-17-dock-place-drag-resize-design.md`
 - 计划：`docs/superpowers/plans/2026-09-17-dock-place-drag-resize.md`
@@ -14,7 +14,7 @@ Git：`main` 应与 `origin/main` 同步（https://github.com/877881029/Tasker �
 
 ## 下一步
 
-按计划 TDD：`expand_from_dock` → 打开不挪栏 → 记住宽度 → 拖/缩放 → 冻结包。
+双击桌面 Tasker：把坞拖到别处再点卡片，任务栏不应弹回初始位置；空白纸面可拖，边缘可缩放。
 
 ## 上一目标（已完成）
 

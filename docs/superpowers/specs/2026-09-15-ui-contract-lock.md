@@ -156,7 +156,7 @@ List order locked: urgent, then pending, then done; within a group newest `updat
 └─────────────────────────────────┴───────┴────────────────────────────┘
 ```
 
-Collapsed: only `rail`, right third. Expanded: full available geometry, cobalt 2px bubble border, selected card cobalt 2px.
+Collapsed: only `rail`, **first launch** right third (`geometry_for_screen`). Expanded: parked rail stays put; the window grows left by extra width (first time `2 × rail`, then remembered). Cobalt 2px bubble border, selected card cobalt 2px. Empty paper drags the shell; 8-edge / corner resize (~8px), including over the search box edge.
 
 Cards: solid 20px state dot + wrapping title only (no inline 详情 / 完成).
 
