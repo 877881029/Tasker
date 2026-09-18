@@ -43,6 +43,18 @@ def test_journal_document_html_keeps_one_stamp_column():
     assert html.index("260917.11AM") < html.index("260916.2PM")
 
 
+def test_journal_document_html_write_mode_is_contenteditable():
+    html = journal_document_html(
+        [("260918.10AM", "")],
+        writable=True,
+    )
+    assert "contenteditable" in html
+    assert "16px" in html
+    assert "Candara" in html
+    html_ro = journal_document_html([("260918.10AM", "正文")])
+    assert 'contenteditable="true"' not in html_ro
+
+
 def test_journal_document_view_uses_chromium():
     from PySide6.QtWebEngineWidgets import QWebEngineView
     from tasker.shell.journal_edit import JournalDocumentView
@@ -188,15 +200,11 @@ def test_journal_uses_reader_document_font(qtbot, tmp_path, monkeypatch):
     qtbot.addWidget(win)
     win.load(store.create())
     win.begin_write()
-    edit = win.journal.head_edit()
-    family = edit.font().family()
-    assert family in {"Candara", "Calibri", "Segoe UI"}
-    assert edit.gutter_font().family() == family
-    assert edit.font().pixelSize() == 16
-    assert edit.gutter_font().pixelSize() == 13
-    assert int(edit.gutter_font().weight()) == 600
-    assert edit.autoFillBackground()
-    assert edit.viewport().autoFillBackground()
+    html = win.journal.document_html()
+    assert "Candara" in html
+    assert "16px" in html
+    assert "contenteditable" in html
+    assert win.journal.stack.currentWidget() is win.journal.document_view
 
 
 def test_readonly_journal_uses_reader_document_css(qtbot, tmp_path, monkeypatch):
@@ -213,7 +221,8 @@ def test_readonly_journal_uses_reader_document_css(qtbot, tmp_path, monkeypatch)
     assert INK.lstrip("#") in html.lower() or INK in html
     assert win.journal.stack.currentWidget() is win.journal.document_view
     win.begin_write()
-    assert win.journal.stack.currentWidget() is win.journal.editor
+    assert win.journal.stack.currentWidget() is win.journal.document_view
+    assert "contenteditable" in win.journal.document_html()
 
 
 def test_journal_readonly_body_uses_ink(qtbot, tmp_path, monkeypatch):

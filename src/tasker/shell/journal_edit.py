@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from html import escape
 
-from PySide6.QtCore import QRect, QSize, Qt, QUrl
+from PySide6.QtCore import QEventLoop, QRect, QSize, Qt, QTimer, QUrl
 from PySide6.QtGui import (
     QColor,
     QFont,
@@ -23,15 +23,35 @@ from tasker.preview.md_visual import TaskerWebPage
 from tasker.theme import COBALT, INK, MUTED, PAPER, wrap_document_html
 
 
-def journal_document_html(entries: list[tuple[str, str]]) -> str:
+_READ_WRITE_STATE_JS = """
+(() => {
+  const stamps = Array.from(document.querySelectorAll('.stamp'));
+  const texts = Array.from(document.querySelectorAll('.txt'));
+  const rows = stamps.map((stamp, i) => {
+    const node = texts[i];
+    const raw = node ? (node.innerText || '') : '';
+    return [stamp.innerText.trim(), raw.replace(/\\u00a0/g, '').replace(/\\n+$/, '')];
+  });
+  return [!!window._journalDirty, rows];
+})()
+"""
+
+
+def journal_document_html(
+    entries: list[tuple[str, str]], *, writable: bool = False
+) -> str:
     cells: list[str] = []
+    edit = ' contenteditable="true" spellcheck="false"' if writable else ""
     for index, (stamp, text) in enumerate(entries):
         klass = " newest" if index == 0 else ""
         lines = escape(text or "").split("\n")
-        body = "<br>".join(line if line else "&nbsp;" for line in lines)
+        if text:
+            body = "<br>".join(line if line else "&nbsp;" for line in lines)
+        else:
+            body = "<br>"
         cells.append(
             f'<div class="stamp{klass}">{escape(stamp)}</div>'
-            f'<div class="txt">{body}</div>'
+            f'<div class="txt"{edit}>{body}</div>'
         )
     extra = (
         "body{padding:8px 20px 32px 12px;font-size:16px;line-height:1.72;"
@@ -39,10 +59,12 @@ def journal_document_html(entries: list[tuple[str, str]]) -> str:
         ".log{display:grid;grid-template-columns:7.75rem minmax(0,1fr);"
         "column-gap:12px;row-gap:1.15em;align-items:start}"
         f".stamp{{text-align:right;color:{MUTED};font-size:13px;font-weight:600;"
-        "line-height:1.72;white-space:nowrap}}"
+        "line-height:1.72;white-space:nowrap;-webkit-user-select:none;"
+        "user-select:none}}"
         f".stamp.newest{{color:{COBALT}}}"
         f".txt{{color:{INK};font-size:16px;line-height:1.72;min-width:0;"
         "overflow-wrap:anywhere}}"
+        f".txt[contenteditable]{{outline:none;caret-color:{INK};min-height:1.72em}}"
     )
     return wrap_document_html(
         f'<div class="log">{"".join(cells)}</div>', extra_css=extra
@@ -66,13 +88,62 @@ class JournalDocumentView(QWebEngineView):
         settings.setFontSize(QWebEngineSettings.FontSize.DefaultFontSize, 16)
         self.setPage(page)
         self._html = ""
+        self._writable = False
+        self._pending_focus = False
+        self._ready = False
+        self.loadFinished.connect(self._on_loaded)
 
-    def set_entries(self, entries: list[tuple[str, str]]) -> None:
-        self._html = journal_document_html(entries)
+    def set_entries(
+        self, entries: list[tuple[str, str]], *, writable: bool = False
+    ) -> None:
+        self._writable = writable
+        self._pending_focus = writable
+        self._ready = False
+        self._html = journal_document_html(entries, writable=writable)
         self.setHtml(self._html, QUrl())
 
     def document_html(self) -> str:
         return self._html
+
+    def read_write_state(self) -> tuple[bool, list[tuple[str, str]]] | None:
+        if not self._writable or not self._ready:
+            return None
+        captured: list[object] = []
+        loop = QEventLoop()
+
+        def _done(value: object) -> None:
+            captured.append(value)
+            loop.quit()
+
+        self.page().runJavaScript(_READ_WRITE_STATE_JS, _done)
+        QTimer.singleShot(1500, loop.quit)
+        loop.exec()
+        if not captured or captured[0] is None:
+            return None
+        payload = captured[0]
+        if not isinstance(payload, (list, tuple)) or len(payload) < 2:
+            return None
+        dirty = bool(payload[0])
+        rows = payload[1]
+        if not isinstance(rows, list):
+            return None
+        found: list[tuple[str, str]] = []
+        for row in rows:
+            if not isinstance(row, (list, tuple)) or len(row) < 2:
+                continue
+            found.append((str(row[0]), str(row[1])))
+        return dirty, found
+
+    def _on_loaded(self, ok: bool) -> None:
+        self._ready = bool(ok)
+        if not ok or not self._pending_focus:
+            return
+        self._pending_focus = False
+        self.page().runJavaScript(
+            "window._journalDirty=false;"
+            "document.addEventListener('input',()=>{window._journalDirty=true;},true);"
+            "const el=document.querySelector('.txt');if(el){el.focus();}"
+        )
 
 
 class StampData(QTextBlockUserData):

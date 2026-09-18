@@ -5,6 +5,17 @@ Git：`main` 应与 `origin/main` 同步（https://github.com/877881029/Tasker �
 
 ## 当前目标
 
+**写入态与只读共用 Chromium**（已完成，冻结包已重建）
+
+- 真正原因：Ctrl+I 切到 `QPlainTextEdit`，Qt 光栅化对不齐 WebEngine
+- 写入仍在 `QWebEngineView` 上 `contenteditable`，同一套 Candara 16px / 1.72 / INK
+
+## 下一步
+
+双击桌面 Tasker：Ctrl+I 后正文应与只读同一套字，不再变细变浅。
+
+## 上一目标（已完成）
+
 **写入态日志对齐只读 Chromium 字号**（已完成，冻结包已重建）
 
 - 编辑器正文 Candara 16px / 行高 1.72 / `#1c1915`；时间戳 13px、字重 600

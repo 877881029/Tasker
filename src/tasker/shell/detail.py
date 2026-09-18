@@ -44,6 +44,7 @@ class JournalPane(QWidget):
         self.stack = QStackedWidget(self)
         self.stack.addWidget(self.document_view)
         self.stack.addWidget(self.editor)
+        self._writing = False
         root = QVBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
         root.addWidget(self.stack)
@@ -68,15 +69,28 @@ class JournalPane(QWidget):
         moment = when or datetime.now()
         self.editor.load_entries(prepend_record(self.editor.entries(), moment))
         self.editor.setReadOnly(False)
-        self.stack.setCurrentWidget(self.editor)
-        self.editor.sync_surface()
-        self.editor.setFocus()
         cursor = self.editor.textCursor()
         cursor.movePosition(cursor.MoveOperation.Start)
         self.editor.setTextCursor(cursor)
+        self._writing = True
+        self.document_view.set_entries(self.editor.entries(), writable=True)
+        self.stack.setCurrentWidget(self.document_view)
+
+    def commit_view(self) -> None:
+        if not self._writing:
+            return
+        state = self.document_view.read_write_state()
+        if state is None:
+            return
+        dirty, pulled = state
+        if dirty:
+            self.editor.load_entries(pulled)
 
     def set_all_readonly(self) -> None:
+        self.commit_view()
+        self._writing = False
         self.editor.load_entries(self._filled_entries())
+        self.editor.setReadOnly(True)
         self._show_document()
 
     def document_html(self) -> str:
@@ -234,6 +248,7 @@ class DetailWindow(QWidget):
             return
         from dataclasses import replace
 
+        self.journal.commit_view()
         body = self.journal.collect()
         pin = self.journal.latest_status()
         self._store.save(replace(item, body_md=body, status_pin=pin))

@@ -13,7 +13,7 @@ Four user-confirmed polish items after the single-editor journal:
 3. Adjacent records are separated by **one blank line** in the editor (not a large top-margin).
 4. Journal body and timestamp gutter use Reader’s document family: Candara, then Calibri, then Segoe UI; normal weight. Do not mix Consolas with the body.
 5. **Read-only** journal is the same Chromium path as Reader documents: `QWebEngineView` + `wrap_document_html` (Candara, 16px, line-height 1.72, `INK`). Stamps are one CSS grid column (`7.75rem`, right-aligned, nowrap); wrap stays in the body column. Ctrl+I still switches to `JournalEditor`. Do not render read-only journal with `QTextBrowser` (Qt HTML subset clips stamps and paints thinner/grayer type).
-6. **Write** mode (`JournalEditor`) uses the same type scale: body Candara **16px** / line-height 1.72 / `INK`; gutter stamps **13px** weight 600. Do not inherit a 12pt stylesheet from `DetailWindow` onto the editor.
+6. **Write** mode stays on the same `QWebEngineView`: `.txt` is `contenteditable`. Do not switch to `QPlainTextEdit` for typing — Qt’s rasterizer cannot match Chromium. `JournalEditor` remains the in-memory model for tests and save fallback.
 
 ## Locked
 
