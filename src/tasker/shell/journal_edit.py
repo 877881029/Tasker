@@ -105,15 +105,13 @@ class JournalEditor(QPlainTextEdit):
         self.setPlaceholderText("记录…")
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.setStyleSheet(
-            f"QPlainTextEdit#journalEditor{{background:{PAPER};color:{INK};border:none;}}"
+            f"QPlainTextEdit#journalEditor{{background:{PAPER};color:{INK};border:none;font-size:16px;}}"
         )
-        self.setFont(_document_font(12))
+        self.setFont(_document_font(16))
+        self.document().setDefaultFont(self.font())
         self._gutter_font = QFont(self.font())
-        if self._gutter_font.pointSize() <= 0:
-            self._gutter_font.setPointSize(10)
-        else:
-            self._gutter_font.setPointSize(max(10, self.font().pointSize() - 2))
-        self._gutter_font.setWeight(self.font().weight())
+        self._gutter_font.setPixelSize(13)
+        self._gutter_font.setWeight(QFont.Weight.DemiBold)
         self._paint_opaque_ink()
         self._gutter = _StampGutter(self)
         self.blockCountChanged.connect(lambda _n: self._sync_gutter())
@@ -125,6 +123,10 @@ class JournalEditor(QPlainTextEdit):
 
     def gutter_font(self) -> QFont:
         return QFont(self._gutter_font)
+
+    def sync_surface(self) -> None:
+        self._paint_opaque_ink()
+        self._sync_gutter()
 
     def resizeEvent(self, event: QResizeEvent) -> None:  # noqa: N802
         super().resizeEvent(event)
@@ -151,6 +153,7 @@ class JournalEditor(QPlainTextEdit):
             self._mark_record(start, stamp)
         cursor.endEditBlock()
         self._ink_document()
+        self._paint_opaque_ink()
         self._sync_gutter()
 
     def entries(self) -> list[tuple[str, str]]:
@@ -242,6 +245,7 @@ class JournalEditor(QPlainTextEdit):
         cursor.select(QTextCursor.SelectionType.Document)
         ink_fmt = QTextCharFormat()
         ink_fmt.setForeground(QColor(INK))
+        ink_fmt.setFont(self.font())
         cursor.mergeCharFormat(ink_fmt)
 
     def _newest_stamp_block(self) -> QTextBlock | None:
@@ -274,11 +278,11 @@ def _stamp_of(block: QTextBlock) -> str:
     return str(getattr(data, "stamp", "") or "")
 
 
-def _document_font(point_size: int) -> QFont:
+def _document_font(pixel_size: int) -> QFont:
     font = QFont()
     font.setFamilies(["Candara", "Calibri", "Segoe UI"])
     font.setStyleHint(QFont.StyleHint.SansSerif)
-    font.setPointSize(point_size)
+    font.setPixelSize(pixel_size)
     font.setWeight(QFont.Weight.Normal)
     font.setStyleStrategy(QFont.StyleStrategy.PreferAntialias)
     return font

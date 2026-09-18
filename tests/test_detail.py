@@ -187,13 +187,16 @@ def test_journal_uses_reader_document_font(qtbot, tmp_path, monkeypatch):
     win = DetailWindow(store)
     qtbot.addWidget(win)
     win.load(store.create())
-    family = win.journal.head_edit().font().family()
+    win.begin_write()
+    edit = win.journal.head_edit()
+    family = edit.font().family()
     assert family in {"Candara", "Calibri", "Segoe UI"}
-    assert win.journal.head_edit().gutter_font().family() == family
-    assert win.journal.head_edit().font().weight() == win.journal.head_edit().gutter_font().weight()
-    assert win.journal.head_edit().font().pointSize() == 12
-    assert win.journal.head_edit().autoFillBackground()
-    assert win.journal.head_edit().viewport().autoFillBackground()
+    assert edit.gutter_font().family() == family
+    assert edit.font().pixelSize() == 16
+    assert edit.gutter_font().pixelSize() == 13
+    assert int(edit.gutter_font().weight()) == 600
+    assert edit.autoFillBackground()
+    assert edit.viewport().autoFillBackground()
 
 
 def test_readonly_journal_uses_reader_document_css(qtbot, tmp_path, monkeypatch):

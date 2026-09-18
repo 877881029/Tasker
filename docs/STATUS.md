@@ -5,6 +5,17 @@ Git：`main` 应与 `origin/main` 同步（https://github.com/877881029/Tasker �
 
 ## 当前目标
 
+**写入态日志对齐只读 Chromium 字号**（已完成，冻结包已重建）
+
+- 编辑器正文 Candara 16px / 行高 1.72 / `#1c1915`；时间戳 13px、字重 600
+- 详情页不再用 12pt 把写入态压回去
+
+## 下一步
+
+双击桌面 Tasker：Ctrl+I 写入时正文和时间戳应与只读同样大、同样深。
+
+## 上一目标（已完成）
+
 **打开详情不挪任务栏；纸窗可拖可缩放**（已完成，冻结包已重建）
 
 - 规格：`docs/superpowers/specs/2026-09-17-dock-place-drag-resize-design.md`

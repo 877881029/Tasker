@@ -69,6 +69,7 @@ class JournalPane(QWidget):
         self.editor.load_entries(prepend_record(self.editor.entries(), moment))
         self.editor.setReadOnly(False)
         self.stack.setCurrentWidget(self.editor)
+        self.editor.sync_surface()
         self.editor.setFocus()
         cursor = self.editor.textCursor()
         cursor.movePosition(cursor.MoveOperation.Start)
@@ -98,7 +99,7 @@ class DetailWindow(QWidget):
         self._store = store
         self._item_id: str | None = None
         self.setStyleSheet(
-            f"background:{PAPER};color:{INK};font-size:12pt;"
+            f"background:{PAPER};color:{INK};"
             "font-family:Candara,Calibri,\"Segoe UI\";"
         )
         if parent is None:
