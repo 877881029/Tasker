@@ -25,15 +25,59 @@ from tasker.theme import COBALT, INK, MUTED, PAPER, wrap_document_html
 
 _READ_WRITE_STATE_JS = """
 (() => {
-  const stamps = Array.from(document.querySelectorAll('.stamp'));
-  const texts = Array.from(document.querySelectorAll('.txt'));
-  const rows = stamps.map((stamp, i) => {
-    const node = texts[i];
-    const raw = node ? (node.innerText || '') : '';
-    return [stamp.innerText.trim(), raw.replace(/\\u00a0/g, '').replace(/\\n+$/, '')];
+  function useful(s) {
+    return String(s || '').replace(/[\\s\\u00a0]/g, '');
+  }
+  function rowText(node) {
+    if (!node) return '';
+    var html = node.innerHTML || '';
+    var fromHtml = html
+      .replace(/&nbsp;/gi, ' ')
+      .replace(/<br\\s*\\/?>/gi, '\\n')
+      .replace(/<\\/div>/gi, '\\n')
+      .replace(/<div[^>]*>/gi, '')
+      .replace(/<\\/p>/gi, '\\n')
+      .replace(/<p[^>]*>/gi, '')
+      .replace(/<[^>]+>/g, '')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&amp;/g, '&');
+    var laid = node.innerText || '';
+    var content = node.textContent || '';
+    var raw = useful(laid) ? laid : (useful(fromHtml) ? fromHtml : content);
+    return String(raw).replace(/\\u00a0/g, ' ').replace(/\\n+$/, '');
+  }
+  var stamps = Array.from(document.querySelectorAll('.stamp'));
+  var texts = Array.from(document.querySelectorAll('.txt'));
+  var live = stamps.map(function (stamp, i) {
+    return [stamp.innerText.trim(), rowText(texts[i])];
   });
+  var snap = window._journalRows;
+  var liveHas = live.some(function (row) { return useful(row[1]); });
+  var rows = liveHas ? live : (Array.isArray(snap) ? snap : live);
   return [!!window._journalDirty, rows];
 })()
+"""
+
+_WRITE_BOOTSTRAP_JS = """
+window._journalDirty=false;
+window._journalRows=null;
+document.addEventListener('input',function(){
+  window._journalDirty=true;
+  window._journalRows=(function(){
+    var stamps=Array.from(document.querySelectorAll('.stamp'));
+    var texts=Array.from(document.querySelectorAll('.txt'));
+    return stamps.map(function(stamp,i){
+      var node=texts[i];
+      var raw=node?(node.innerText||node.textContent||node.innerHTML||''):'';
+      return [stamp.innerText.trim(), String(raw).replace(/<br\\s*\\/?>/gi,'\\n').replace(/<[^>]+>/g,'').replace(/\\u00a0/g,' ').replace(/\\n+$/,'')];
+    });
+  })();
+},true);
+document.addEventListener('keydown',function(e){
+  if((e.ctrlKey||e.metaKey)&&(e.key==='s'||e.key==='S')){e.preventDefault();e.stopPropagation();}
+},true);
+var _el=document.querySelector('.txt');if(_el)_el.focus();
 """
 
 
@@ -68,11 +112,7 @@ def journal_document_html(
     )
     script = ""
     if writable:
-        script = (
-            "<script>window._journalDirty=false;"
-            "document.addEventListener('input',function(){window._journalDirty=true;},true);"
-            "var _el=document.querySelector('.txt');if(_el)_el.focus();</script>"
-        )
+        script = f"<script>{_WRITE_BOOTSTRAP_JS}</script>"
     return wrap_document_html(
         f'<div class="log">{"".join(cells)}</div>{script}', extra_css=extra
     )
@@ -145,12 +185,17 @@ class JournalDocumentView(QWebEngineView):
         self._ready = bool(ok)
         if not ok or not self._writable:
             return
+        focus = ""
         if self._pending_focus:
             self._pending_focus = False
+            focus = "var el=document.querySelector('.txt');if(el){el.focus();}"
         self.page().runJavaScript(
             "window._journalDirty=window._journalDirty||false;"
             "document.addEventListener('input',function(){window._journalDirty=true;},true);"
-            "var el=document.querySelector('.txt');if(el){el.focus();}"
+            "document.addEventListener('keydown',function(e){"
+            "if((e.ctrlKey||e.metaKey)&&(e.key==='s'||e.key==='S'))"
+            "{e.preventDefault();e.stopPropagation();}},true);"
+            + focus
         )
 
 

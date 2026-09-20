@@ -23,6 +23,28 @@ from tasker.store import Item, Store
 from tasker.theme import DONE_DOT, INK, PAPER, PENDING_DOT, URGENT_DOT
 
 
+def coalesce_journal_pull(
+    current: list[tuple[str, str]], pulled: list[tuple[str, str]]
+) -> list[tuple[str, str]]:
+    if not pulled:
+        return current
+    if not any((text or "").strip() for _stamp, text in pulled):
+        return current
+    merged: list[tuple[str, str]] = []
+    for index, (stamp, text) in enumerate(pulled):
+        if (text or "").strip():
+            merged.append((stamp, text))
+            continue
+        if index < len(current) and (current[index][1] or "").strip():
+            old_stamp, old_text = current[index]
+            merged.append((old_stamp or stamp, old_text))
+        else:
+            merged.append((stamp, text))
+    if len(current) > len(pulled):
+        merged.extend(current[len(pulled) :])
+    return merged
+
+
 def detail_geometry(avail: QRect, dock_width: int) -> QRect:
     width = max(400, avail.width() - dock_width)
     return QRect(avail.x(), avail.y(), width, avail.height())
@@ -83,9 +105,9 @@ class JournalPane(QWidget):
         if state is None:
             return
         _dirty, pulled = state
-        if not pulled and self.editor.entries():
-            return
-        self.editor.load_entries(pulled)
+        self.editor.load_entries(
+            coalesce_journal_pull(self.editor.entries(), pulled)
+        )
 
     def set_all_readonly(self) -> None:
         self.commit_view()

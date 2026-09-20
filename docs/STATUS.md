@@ -5,6 +5,18 @@ Git：`main` 应与 `origin/main` 同步（https://github.com/877881029/Tasker �
 
 ## 当前目标
 
+**Ctrl+S 不得用空 DOM 把日志抹掉**（已完成，冻结包已重建）
+
+- 真正原因：保存把 Chromium 行整页写回；页面未排版时 `innerText` 全空，空时间戳再被丢掉，旧记录也从磁盘消失
+- 有正文的行才采用页面文字；整页空白或某行被读成空时，保留编辑器里已有内容
+- 规格：`docs/superpowers/specs/2026-09-17-detail-expand-journal-polish-design.md` 第 6 条
+
+## 下一步
+
+双击桌面 Tasker：打开已有记录的卡片，Ctrl+I 写入后再 Ctrl+S，旧内容应还在，刚打的字也应留下。
+
+## 上一目标（已完成）
+
 **Ctrl+S 必须收下详情里刚写的字**（已完成，冻结包已重建）
 
 - 真正原因：写入在 Chromium `contenteditable` 上，保存却只在 `_journalDirty` 为真时才把 DOM 写回隐藏编辑器；`loadFinished` 竞态下脏标记经常没亮

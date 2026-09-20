@@ -52,6 +52,7 @@ def test_journal_document_html_write_mode_is_contenteditable():
     assert "16px" in html
     assert "Candara" in html
     assert "_journalDirty" in html
+    assert "preventDefault" in html
     html_ro = journal_document_html([("260918.10AM", "正文")])
     assert 'contenteditable="true"' not in html_ro
     assert "_journalDirty" not in html_ro
@@ -290,6 +291,48 @@ def test_ctrl_s_keeps_chromium_text_when_dirty_flag_missing(qtbot, tmp_path, mon
     assert "旧记录" in loaded.body_md
     assert win.journal.stack.currentWidget() is win.journal.document_view
     assert 'contenteditable="true"' not in win.journal.document_html()
+
+
+def test_ctrl_s_does_not_wipe_when_chromium_returns_blank_texts(
+    qtbot, tmp_path, monkeypatch
+):
+    monkeypatch.setenv("TASKER_DATA_DIR", str(tmp_path))
+    store = Store(tmp_path)
+    item = store.save(replace(store.create(), body_md="260915.3PM\n\n旧记录"))
+    win = DetailWindow(store)
+    qtbot.addWidget(win)
+    win.load(item)
+    win.begin_write()
+    win.journal.document_view.read_write_state = lambda: (
+        True,
+        [("260918.10AM", ""), ("260915.3PM", "")],
+    )
+    win.save_keep_open()
+    loaded = store.get(item.id)
+    assert loaded is not None
+    assert "旧记录" in loaded.body_md
+    assert win.journal.head_edit().entries()
+    html = win.journal.document_html()
+    assert "旧记录" in html
+
+
+def test_ctrl_s_keeps_old_text_when_pull_blanks_older_row(qtbot, tmp_path, monkeypatch):
+    monkeypatch.setenv("TASKER_DATA_DIR", str(tmp_path))
+    store = Store(tmp_path)
+    item = store.save(replace(store.create(), body_md="260915.3PM\n\n旧记录"))
+    win = DetailWindow(store)
+    qtbot.addWidget(win)
+    win.load(item)
+    win.begin_write()
+    win.journal.document_view.read_write_state = lambda: (
+        False,
+        [("260918.10AM", "新写的一行"), ("260915.3PM", "")],
+    )
+    win.save_keep_open()
+    loaded = store.get(item.id)
+    assert loaded is not None
+    assert "新写的一行" in loaded.body_md
+    assert "旧记录" in loaded.body_md
 
 
 def test_ctrl_s_keeps_editor_when_chromium_returns_no_rows(qtbot, tmp_path, monkeypatch):
