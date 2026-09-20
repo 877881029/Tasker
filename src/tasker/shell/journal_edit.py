@@ -66,8 +66,15 @@ def journal_document_html(
         "overflow-wrap:anywhere}}"
         f".txt[contenteditable]{{outline:none;caret-color:{INK};min-height:1.72em}}"
     )
+    script = ""
+    if writable:
+        script = (
+            "<script>window._journalDirty=false;"
+            "document.addEventListener('input',function(){window._journalDirty=true;},true);"
+            "var _el=document.querySelector('.txt');if(_el)_el.focus();</script>"
+        )
     return wrap_document_html(
-        f'<div class="log">{"".join(cells)}</div>', extra_css=extra
+        f'<div class="log">{"".join(cells)}</div>{script}', extra_css=extra
     )
 
 
@@ -106,7 +113,7 @@ class JournalDocumentView(QWebEngineView):
         return self._html
 
     def read_write_state(self) -> tuple[bool, list[tuple[str, str]]] | None:
-        if not self._writable or not self._ready:
+        if not self._writable:
             return None
         captured: list[object] = []
         loop = QEventLoop()
@@ -136,13 +143,14 @@ class JournalDocumentView(QWebEngineView):
 
     def _on_loaded(self, ok: bool) -> None:
         self._ready = bool(ok)
-        if not ok or not self._pending_focus:
+        if not ok or not self._writable:
             return
-        self._pending_focus = False
+        if self._pending_focus:
+            self._pending_focus = False
         self.page().runJavaScript(
-            "window._journalDirty=false;"
-            "document.addEventListener('input',()=>{window._journalDirty=true;},true);"
-            "const el=document.querySelector('.txt');if(el){el.focus();}"
+            "window._journalDirty=window._journalDirty||false;"
+            "document.addEventListener('input',function(){window._journalDirty=true;},true);"
+            "var el=document.querySelector('.txt');if(el){el.focus();}"
         )
 
 

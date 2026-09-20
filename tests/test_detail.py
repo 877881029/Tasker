@@ -51,8 +51,10 @@ def test_journal_document_html_write_mode_is_contenteditable():
     assert "contenteditable" in html
     assert "16px" in html
     assert "Candara" in html
+    assert "_journalDirty" in html
     html_ro = journal_document_html([("260918.10AM", "正文")])
     assert 'contenteditable="true"' not in html_ro
+    assert "_journalDirty" not in html_ro
 
 
 def test_journal_document_view_uses_chromium():
@@ -268,6 +270,44 @@ def test_journal_is_one_scrolling_editor(qtbot, tmp_path, monkeypatch):
     assert edit.maximumHeight() > 10000
 
 
+def test_ctrl_s_keeps_chromium_text_when_dirty_flag_missing(qtbot, tmp_path, monkeypatch):
+    monkeypatch.setenv("TASKER_DATA_DIR", str(tmp_path))
+    store = Store(tmp_path)
+    item = store.save(replace(store.create(), body_md="260915.3PM\n\n旧记录"))
+    win = DetailWindow(store)
+    qtbot.addWidget(win)
+    win.load(item)
+    win.begin_write()
+    assert win.journal.head_edit().entries()[0][1] == ""
+    win.journal.document_view.read_write_state = lambda: (
+        False,
+        [("260918.10AM", "刚写在详情里的内容"), ("260915.3PM", "旧记录")],
+    )
+    win.save_keep_open()
+    loaded = store.get(item.id)
+    assert loaded is not None
+    assert "刚写在详情里的内容" in loaded.body_md
+    assert "旧记录" in loaded.body_md
+    assert win.journal.stack.currentWidget() is win.journal.document_view
+    assert 'contenteditable="true"' not in win.journal.document_html()
+
+
+def test_ctrl_s_keeps_editor_when_chromium_returns_no_rows(qtbot, tmp_path, monkeypatch):
+    monkeypatch.setenv("TASKER_DATA_DIR", str(tmp_path))
+    store = Store(tmp_path)
+    item = store.create()
+    win = DetailWindow(store)
+    qtbot.addWidget(win)
+    win.load(item)
+    win.begin_write()
+    _insert_head(win, "已接到 setup")
+    win.journal.document_view.read_write_state = lambda: (False, [])
+    win.save_keep_open()
+    loaded = store.get(item.id)
+    assert loaded is not None
+    assert "已接到 setup" in loaded.body_md
+
+
 def test_ctrl_s_writes_and_stays_readonly(qtbot, tmp_path, monkeypatch):
     monkeypatch.setenv("TASKER_DATA_DIR", str(tmp_path))
     store = Store(tmp_path)
@@ -278,6 +318,7 @@ def test_ctrl_s_writes_and_stays_readonly(qtbot, tmp_path, monkeypatch):
     win.load(item)
     win.begin_write()
     _insert_head(win, "已接到 setup")
+    win.journal.document_view.read_write_state = lambda: None
     win.title_edit.setText("改脚本")
     win.save_keep_open()
     loaded = store.get(item.id)

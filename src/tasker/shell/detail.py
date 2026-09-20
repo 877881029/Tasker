@@ -82,9 +82,10 @@ class JournalPane(QWidget):
         state = self.document_view.read_write_state()
         if state is None:
             return
-        dirty, pulled = state
-        if dirty:
-            self.editor.load_entries(pulled)
+        _dirty, pulled = state
+        if not pulled and self.editor.entries():
+            return
+        self.editor.load_entries(pulled)
 
     def set_all_readonly(self) -> None:
         self.commit_view()

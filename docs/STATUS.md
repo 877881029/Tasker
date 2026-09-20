@@ -1,9 +1,21 @@
 # Tasker 项目状态（AI 接手必读）
 
-最后更新：2026-09-17  
+最后更新：2026-09-20  
 Git：`main` 应与 `origin/main` 同步（https://github.com/877881029/Tasker ）。
 
 ## 当前目标
+
+**Ctrl+S 必须收下详情里刚写的字**（已完成，冻结包已重建）
+
+- 真正原因：写入在 Chromium `contenteditable` 上，保存却只在 `_journalDirty` 为真时才把 DOM 写回隐藏编辑器；`loadFinished` 竞态下脏标记经常没亮
+- 保存时只要读到页面行就提交，不再看脏标记；JS 读不到行则保留编辑器模型，空时间戳仍在提交后再丢
+- 规格：`docs/superpowers/specs/2026-09-17-detail-expand-journal-polish-design.md` 第 6 条
+
+## 下一步
+
+双击桌面 Tasker：打开详情，Ctrl+I 写入后再 Ctrl+S，刚打的字应留在日志里，不应像没保存就退出编辑。
+
+## 上一目标（已完成）
 
 **写入态与只读共用 Chromium**（已完成，冻结包已重建）
 
@@ -73,7 +85,7 @@ Git：`main` 应与 `origin/main` 同步（https://github.com/877881029/Tasker �
 
 ## 上一目标（已完成）
 
-**日志正文对齐 Reader 墨色**（冻结包已重建）
+**日志正文对齐 Reader 墨色**（已完成，冻结包已重建）
 
 - 只读日志不再发灰：12pt Candara、行高 1.72、视口铺实纸色
 - 时间戳仍用 COBALT / MUTED，正文锁 `#1c1915`
