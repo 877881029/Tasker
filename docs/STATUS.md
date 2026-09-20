@@ -5,6 +5,19 @@ Git：`main` 应与 `origin/main` 同步（https://github.com/877881029/Tasker �
 
 ## 当前目标
 
+**Ctrl+S 必须用输入过程中同步好的 Chromium 正文**（已完成，冻结包已重建）
+
+- 真正原因：字打在 Chromium 里，保存却在快捷键里 nested `runJavaScript`；这次读取经常是空的，隐藏编辑器仍是空时间戳，丢掉后看起来像没保存
+- 旧逻辑没问题是因为打字和保存都走 `QPlainTextEdit`；改成 contenteditable 之后保存不再读用户正在打的那个面
+- 写入时轮询页面行到 Python `live_rows`，Ctrl+S 先用这份快照
+- 规格：`docs/superpowers/specs/2026-09-17-detail-expand-journal-polish-design.md` 第 6 条
+
+## 下一步
+
+双击桌面 Tasker：打开详情，Ctrl+I 打「开始测试」再 Ctrl+S，这几个字应留在日志里。
+
+## 上一目标（已完成）
+
 **Ctrl+S 不得用空 DOM 把日志抹掉**（已完成，冻结包已重建）
 
 - 真正原因：保存把 Chromium 行整页写回；页面未排版时 `innerText` 全空，空时间戳再被丢掉，旧记录也从磁盘消失

@@ -81,6 +81,21 @@ var _el=document.querySelector('.txt');if(_el)_el.focus();
 """
 
 
+def parse_write_state(payload: object) -> tuple[bool, list[tuple[str, str]]] | None:
+    if payload is None or not isinstance(payload, (list, tuple)) or len(payload) < 2:
+        return None
+    dirty = bool(payload[0])
+    rows = payload[1]
+    if not isinstance(rows, list):
+        return None
+    found: list[tuple[str, str]] = []
+    for row in rows:
+        if not isinstance(row, (list, tuple)) or len(row) < 2:
+            continue
+        found.append((str(row[0]), str(row[1])))
+    return dirty, found
+
+
 def journal_document_html(
     entries: list[tuple[str, str]], *, writable: bool = False
 ) -> str:
@@ -138,11 +153,17 @@ class JournalDocumentView(QWebEngineView):
         self._writable = False
         self._pending_focus = False
         self._ready = False
+        self._live_rows: list[tuple[str, str]] | None = None
+        self._poll = QTimer(self)
+        self._poll.setInterval(120)
+        self._poll.timeout.connect(self._poll_rows)
         self.loadFinished.connect(self._on_loaded)
 
     def set_entries(
         self, entries: list[tuple[str, str]], *, writable: bool = False
     ) -> None:
+        self._poll.stop()
+        self._live_rows = None
         self._writable = writable
         self._pending_focus = writable
         self._ready = False
@@ -152,9 +173,19 @@ class JournalDocumentView(QWebEngineView):
     def document_html(self) -> str:
         return self._html
 
+    def live_rows(self) -> list[tuple[str, str]] | None:
+        if not self._live_rows:
+            return None
+        if not any((text or "").strip() for _stamp, text in self._live_rows):
+            return None
+        return list(self._live_rows)
+
     def read_write_state(self) -> tuple[bool, list[tuple[str, str]]] | None:
         if not self._writable:
             return None
+        live = self.live_rows()
+        if live is not None:
+            return True, live
         captured: list[object] = []
         loop = QEventLoop()
 
@@ -165,21 +196,29 @@ class JournalDocumentView(QWebEngineView):
         self.page().runJavaScript(_READ_WRITE_STATE_JS, _done)
         QTimer.singleShot(1500, loop.quit)
         loop.exec()
-        if not captured or captured[0] is None:
+        if not captured:
             return None
-        payload = captured[0]
-        if not isinstance(payload, (list, tuple)) or len(payload) < 2:
+        parsed = parse_write_state(captured[0])
+        if parsed is None:
             return None
-        dirty = bool(payload[0])
-        rows = payload[1]
-        if not isinstance(rows, list):
-            return None
-        found: list[tuple[str, str]] = []
-        for row in rows:
-            if not isinstance(row, (list, tuple)) or len(row) < 2:
-                continue
-            found.append((str(row[0]), str(row[1])))
+        dirty, found = parsed
+        if any((text or "").strip() for _stamp, text in found):
+            self._live_rows = found
         return dirty, found
+
+    def _poll_rows(self) -> None:
+        if not self._writable:
+            self._poll.stop()
+            return
+        self.page().runJavaScript(_READ_WRITE_STATE_JS, self._accept_poll)
+
+    def _accept_poll(self, payload: object) -> None:
+        parsed = parse_write_state(payload)
+        if parsed is None:
+            return
+        _dirty, rows = parsed
+        if any((text or "").strip() for _stamp, text in rows):
+            self._live_rows = rows
 
     def _on_loaded(self, ok: bool) -> None:
         self._ready = bool(ok)
@@ -197,6 +236,8 @@ class JournalDocumentView(QWebEngineView):
             "{e.preventDefault();e.stopPropagation();}},true);"
             + focus
         )
+        self._poll.start()
+        self._poll_rows()
 
 
 class StampData(QTextBlockUserData):

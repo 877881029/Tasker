@@ -374,6 +374,24 @@ def test_ctrl_s_writes_and_stays_readonly(qtbot, tmp_path, monkeypatch):
     assert getattr(win, "close_btn", None) is None
 
 
+def test_ctrl_s_keeps_typed_text_from_live_chromium_rows(qtbot, tmp_path, monkeypatch):
+    monkeypatch.setenv("TASKER_DATA_DIR", str(tmp_path))
+    store = Store(tmp_path)
+    item = store.create()
+    win = DetailWindow(store)
+    qtbot.addWidget(win)
+    win.load(item)
+    win.begin_write()
+    assert win.journal.head_edit().entries()[0][1] == ""
+    win.journal.document_view._live_rows = [("260920.4PM", "开始测试")]
+    win.journal.document_view.read_write_state = lambda: None
+    win.save_keep_open()
+    loaded = store.get(item.id)
+    assert loaded is not None
+    assert "开始测试" in loaded.body_md
+    assert "开始测试" in win.journal.document_html()
+
+
 def test_image_absolute_path_unchanged_on_save(qtbot, tmp_path, monkeypatch):
     monkeypatch.setenv("TASKER_DATA_DIR", str(tmp_path))
     store = Store(tmp_path)

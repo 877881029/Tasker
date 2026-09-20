@@ -101,10 +101,12 @@ class JournalPane(QWidget):
     def commit_view(self) -> None:
         if not self._writing:
             return
-        state = self.document_view.read_write_state()
-        if state is None:
-            return
-        _dirty, pulled = state
+        pulled: list[tuple[str, str]] | None = self.document_view.live_rows()
+        if pulled is None:
+            state = self.document_view.read_write_state()
+            if state is None:
+                return
+            _dirty, pulled = state
         self.editor.load_entries(
             coalesce_journal_pull(self.editor.entries(), pulled)
         )
