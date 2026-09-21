@@ -156,7 +156,7 @@ List order locked: urgent, then pending, then done; within a group newest `updat
 └─────────────────────────────────┴───────┴────────────────────────────┘
 ```
 
-Collapsed: only `rail`, **first launch** right third (`geometry_for_screen`). Expanded: parked rail stays put; the window grows left by extra width (first time `2 × rail`, then remembered). The user may then resize to the full work area; extra pixels stay in `detailHost`. Shell radius 16px, or 0 when the window is flush to `availableGeometry()`. Cobalt 2px bubble border, selected card cobalt 2px. Empty paper drags the shell; 8-edge / corner resize (~8px), including over the search box edge (`WM_NCHITTEST`).
+Collapsed: only `rail`, **first launch** right third (`geometry_for_screen`). Expanded: parked rail stays put; the window grows left by extra width (first time `2 × rail`, then remembered). The user may then resize to the full work area; extra pixels stay in `detailHost`. Shell radius 16px with a matching HWND mask on the full window rect, or radius 0 and no mask when flush to `availableGeometry()`. Cobalt 2px bubble border, selected card cobalt 2px. Empty paper drags the shell; 8-edge / corner resize (~8px), including over the search box edge (`WM_NCHITTEST`).
 
 Cards: solid 20px state dot + wrapping title only (no inline 详情 / 完成).
 

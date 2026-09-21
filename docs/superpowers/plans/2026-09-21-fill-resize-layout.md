@@ -43,7 +43,7 @@
 
 **Interfaces:**
 - Consumes: Task 1 helpers
-- Produces: `DockWindow._apply_round_mask` uses radius 0 + `flush` when filled; no rounded `setMask`
+- Produces: `DockWindow._apply_round_mask` uses radius 0 + `flush` + `clearMask` when filled; otherwise `round_window_mask` on the full window rect
 - Produces: `DockWindow.nativeEvent` returns `hit_test_local` for `WM_NCHITTEST`
 
 - [x] Write failing test: fill `avail` while expanded, rail width/right edge unchanged, detail stretches

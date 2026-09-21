@@ -17,7 +17,7 @@ Theme hex, tray, `Qt.Tool | FramelessWindowHint`, no 保存/关闭, Store/journa
 1. **Open detail:** same as today — rail screen rect `R` unchanged; window grows left by extra `E` (`2 × R.w` first, then remembered). `expand_from_dock` still clamps that *open* extra so the window does not jump past `avail`.
 2. **After that, user resize is free:** eight edges/corners, including over the search box on the frame. The user may pull the window until it matches `availableGeometry()`. Shrinking from a filled window is allowed immediately (no restore step).
 3. **Layout:** while detail is open, rail width stays the last collapsed width; extra pixels go to `detailHost` (stretch). Height of rail and detail follow the shell.
-4. **Filled work area:** if the window rect is within 2px of `avail` on x, y, width, and height, treat it as flush: shell corner radius **0** so the paper meets the work-area edges. Otherwise keep **16px**. Do not clip the HWND with a rounded `setMask` — that eats corner hit-tests.
+4. **Filled work area:** if the window rect is within 2px of `avail` on x, y, width, and height, treat it as flush: shell corner radius **0** and no rounded mask so the paper meets the work-area edges. Otherwise keep **16px** and clip the HWND with a rounded mask on the **full** window rect (do not shrink by 1px — that misaligns the four corners). `WM_NCHITTEST` still uses the 8px frame.
 5. **Hit-testing:** Windows `WM_NCHITTEST` on an 8px frame (Reader’s pattern), so resize does not depend on a child eating the press. Empty paper still `startSystemMove()`. Interactive controls stay client hits except on the frame.
 
 ## Tests

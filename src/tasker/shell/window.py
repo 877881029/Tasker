@@ -4,13 +4,15 @@ import ctypes
 import os
 from ctypes import wintypes
 
-from PySide6.QtCore import QEvent, QPoint, QRect, QSize, Qt
+from PySide6.QtCore import QEvent, QPoint, QRect, QRectF, QSize, Qt
 from PySide6.QtGui import (
     QColor,
     QGuiApplication,
     QIcon,
     QMouseEvent,
+    QPainterPath,
     QPalette,
+    QRegion,
 )
 from PySide6.QtWidgets import (
     QApplication,
@@ -131,6 +133,14 @@ def paper_corner_radius(geo: QRect, avail: QRect, slack: int = 2) -> int:
     ):
         return 0
     return 16
+
+
+def round_window_mask(rect: QRect, radius: int) -> QRegion | None:
+    if radius <= 0:
+        return None
+    path = QPainterPath()
+    path.addRoundedRect(QRectF(rect), float(radius), float(radius))
+    return QRegion(path.toFillPolygon().toPolygon())
 
 
 def hit_test_local(size: QSize, local: QPoint, margin: int = FRAME_MARGIN) -> int:
@@ -326,12 +336,13 @@ class DockWindow(QWidget):
         scroll.setFrameShape(scroll.Shape.NoFrame)
         scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         paper = QColor(PAPER)
-        for widget in (self, scroll, scroll.viewport(), self.list_host):
+        for widget in (scroll, scroll.viewport(), self.list_host):
             palette = widget.palette()
             palette.setColor(QPalette.ColorRole.Window, paper)
             palette.setColor(QPalette.ColorRole.Base, paper)
             widget.setPalette(palette)
             widget.setAutoFillBackground(True)
+        self.setAutoFillBackground(False)
 
         root = QVBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
@@ -448,13 +459,17 @@ class DockWindow(QWidget):
         )
 
     def _apply_round_mask(self) -> None:
-        self.clearMask()
         screen = QGuiApplication.primaryScreen()
         avail = screen.availableGeometry() if screen else QRect(self.geometry())
-        flush = paper_corner_radius(self.geometry(), avail) == 0
-        self.shell.setProperty("flush", "true" if flush else "false")
+        radius = paper_corner_radius(self.geometry(), avail)
+        self.shell.setProperty("flush", "true" if radius == 0 else "false")
         self.shell.style().unpolish(self.shell)
         self.shell.style().polish(self.shell)
+        region = round_window_mask(self.rect(), radius)
+        if region is None:
+            self.clearMask()
+        else:
+            self.setMask(region)
 
     def nativeEvent(self, eventType, message):  # noqa: N802
         if os.name == "nt" and eventType in (b"windows_generic_MSG", "windows_generic_MSG"):

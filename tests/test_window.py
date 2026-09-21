@@ -21,6 +21,7 @@ from tasker.shell.window import (
     hit_test_local,
     paper_action,
     paper_corner_radius,
+    round_window_mask,
 )
 from tasker.store import Store
 from tasker.theme import DONE_BG, PAPER, dock_style
@@ -378,6 +379,20 @@ def test_paper_action_move_resize_or_ignore():
     assert paper_action(QPoint(200, 150), size, "journalDocument") == "ignore"
 
 
+def test_round_window_mask_clips_corners_on_full_rect():
+    rect = QRect(0, 0, 400, 300)
+    assert round_window_mask(rect, 0) is None
+    region = round_window_mask(rect, 16)
+    assert region is not None
+    inner = rect.adjusted(1, 1, -1, -1)
+    assert region.boundingRect().contains(inner)
+    assert not region.contains(QPoint(0, 0))
+    assert not region.contains(QPoint(399, 0))
+    assert not region.contains(QPoint(0, 299))
+    assert not region.contains(QPoint(399, 299))
+    assert region.contains(QPoint(200, 150))
+
+
 def test_paper_corner_radius_is_zero_when_flush_to_work_area():
     avail = QRect(0, 40, 1920, 1040)
     inset = QRect(200, 80, 1200, 800)
@@ -388,15 +403,6 @@ def test_paper_corner_radius_is_zero_when_flush_to_work_area():
 
 def test_hit_test_local_eight_edges():
     size = QSize(400, 300)
-    assert hit_test_local(size, QPoint(2, 150)) == HTLEFT
-    assert hit_test_local(size, QPoint(398, 150)) == HTRIGHT
-    assert hit_test_local(size, QPoint(200, 2)) == HTTOP
-    assert hit_test_local(size, QPoint(200, 298)) == HTBOTTOM
-    assert hit_test_local(size, QPoint(1, 1)) == HTTOPLEFT
-    assert hit_test_local(size, QPoint(399, 1)) == HTTOPRIGHT
-    assert hit_test_local(size, QPoint(1, 299)) == HTBOTTOMLEFT
-    assert hit_test_local(size, QPoint(399, 299)) == HTBOTTOMRIGHT
-    assert hit_test_local(size, QPoint(200, 150)) == HTCLIENT
     assert hit_test_local(size, QPoint(2, 150)) == HTLEFT
     assert hit_test_local(size, QPoint(398, 150)) == HTRIGHT
     assert hit_test_local(size, QPoint(200, 2)) == HTTOP
