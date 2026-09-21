@@ -203,11 +203,10 @@ def test_journal_uses_reader_document_font(qtbot, tmp_path, monkeypatch):
     qtbot.addWidget(win)
     win.load(store.create())
     win.begin_write()
-    html = win.journal.document_html()
-    assert "Candara" in html
-    assert "16px" in html
-    assert "contenteditable" in html
-    assert win.journal.stack.currentWidget() is win.journal.document_view
+    edit = win.journal.head_edit()
+    assert "Candara" in edit.font().families() or edit.font().family()
+    assert edit.font().pixelSize() == 16
+    assert win.journal.stack.currentWidget() is edit
 
 
 def test_readonly_journal_uses_reader_document_css(qtbot, tmp_path, monkeypatch):
@@ -224,8 +223,8 @@ def test_readonly_journal_uses_reader_document_css(qtbot, tmp_path, monkeypatch)
     assert INK.lstrip("#") in html.lower() or INK in html
     assert win.journal.stack.currentWidget() is win.journal.document_view
     win.begin_write()
-    assert win.journal.stack.currentWidget() is win.journal.document_view
-    assert "contenteditable" in win.journal.document_html()
+    assert win.journal.stack.currentWidget() is win.journal.head_edit()
+    assert not win.journal.head_edit().isReadOnly()
 
 
 def test_journal_readonly_body_uses_ink(qtbot, tmp_path, monkeypatch):
@@ -279,11 +278,7 @@ def test_ctrl_s_keeps_chromium_text_when_dirty_flag_missing(qtbot, tmp_path, mon
     qtbot.addWidget(win)
     win.load(item)
     win.begin_write()
-    assert win.journal.head_edit().entries()[0][1] == ""
-    win.journal.document_view.read_write_state = lambda: (
-        False,
-        [("260918.10AM", "刚写在详情里的内容"), ("260915.3PM", "旧记录")],
-    )
+    _insert_head(win, "刚写在详情里的内容")
     win.save_keep_open()
     loaded = store.get(item.id)
     assert loaded is not None
@@ -324,10 +319,7 @@ def test_ctrl_s_keeps_old_text_when_pull_blanks_older_row(qtbot, tmp_path, monke
     qtbot.addWidget(win)
     win.load(item)
     win.begin_write()
-    win.journal.document_view.read_write_state = lambda: (
-        False,
-        [("260918.10AM", "新写的一行"), ("260915.3PM", "")],
-    )
+    _insert_head(win, "新写的一行")
     win.save_keep_open()
     loaded = store.get(item.id)
     assert loaded is not None
@@ -374,7 +366,7 @@ def test_ctrl_s_writes_and_stays_readonly(qtbot, tmp_path, monkeypatch):
     assert getattr(win, "close_btn", None) is None
 
 
-def test_ctrl_s_keeps_typed_text_from_live_chromium_rows(qtbot, tmp_path, monkeypatch):
+def test_ctrl_s_keeps_text_typed_in_write_editor(qtbot, tmp_path, monkeypatch):
     monkeypatch.setenv("TASKER_DATA_DIR", str(tmp_path))
     store = Store(tmp_path)
     item = store.create()
@@ -382,14 +374,14 @@ def test_ctrl_s_keeps_typed_text_from_live_chromium_rows(qtbot, tmp_path, monkey
     qtbot.addWidget(win)
     win.load(item)
     win.begin_write()
-    assert win.journal.head_edit().entries()[0][1] == ""
-    win.journal.document_view._live_rows = [("260920.4PM", "开始测试")]
-    win.journal.document_view.read_write_state = lambda: None
+    assert win.journal.stack.currentWidget() is win.journal.head_edit()
+    _insert_head(win, "开始测试")
     win.save_keep_open()
     loaded = store.get(item.id)
     assert loaded is not None
     assert "开始测试" in loaded.body_md
-    assert "开始测试" in win.journal.document_html()
+    assert win.journal.stack.currentWidget() is win.journal.document_view
+    assert 'contenteditable="true"' not in win.journal.document_html()
 
 
 def test_image_absolute_path_unchanged_on_save(qtbot, tmp_path, monkeypatch):

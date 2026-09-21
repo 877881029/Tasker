@@ -95,21 +95,11 @@ class JournalPane(QWidget):
         cursor.movePosition(cursor.MoveOperation.Start)
         self.editor.setTextCursor(cursor)
         self._writing = True
-        self.document_view.set_entries(self.editor.entries(), writable=True)
-        self.stack.setCurrentWidget(self.document_view)
+        self.stack.setCurrentWidget(self.editor)
+        self.editor.setFocus()
 
     def commit_view(self) -> None:
-        if not self._writing:
-            return
-        pulled: list[tuple[str, str]] | None = self.document_view.live_rows()
-        if pulled is None:
-            state = self.document_view.read_write_state()
-            if state is None:
-                return
-            _dirty, pulled = state
-        self.editor.load_entries(
-            coalesce_journal_pull(self.editor.entries(), pulled)
-        )
+        return
 
     def set_all_readonly(self) -> None:
         self.commit_view()

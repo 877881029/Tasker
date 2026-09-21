@@ -1,9 +1,21 @@
 # Tasker 项目状态（AI 接手必读）
 
-最后更新：2026-09-20  
+最后更新：2026-09-21  
 Git：`main` 应与 `origin/main` 同步（https://github.com/877881029/Tasker ）。
 
 ## 当前目标
+
+**Ctrl+S 改回编辑器写入，不再从 Chromium 读正文**（已完成，冻结包已重建）
+
+- 真正原因：打字在 `contenteditable`，保存读不到页面；多次 JS/脏标记/快照补丁后 Ctrl+S 仍清空
+- 只读仍用 Chromium；Ctrl+I 切回 `JournalEditor`，保存读同一块编辑器（与原先能用的写入逻辑一致）
+- 规格：`docs/superpowers/specs/2026-09-17-detail-expand-journal-polish-design.md` 第 6 条
+
+## 下一步
+
+双击桌面 Tasker：打开详情，Ctrl+I 打几个字再 Ctrl+S，编辑区不应被清空，字应留在日志里。
+
+## 上一目标（已完成）
 
 **Ctrl+S 必须用输入过程中同步好的 Chromium 正文**（已完成，冻结包已重建）
 
