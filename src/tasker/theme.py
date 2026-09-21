@@ -24,6 +24,7 @@ def dock_style() -> str:
         "QWidget#dock{background:transparent;}"
         f"QWidget#shell{{background:{PAPER};color:{INK};border:1px solid {LINE};"
         "border-radius:16px;}}"
+        "QWidget#shell[flush='true']{border-radius:0px;}"
         f"QWidget#shell[bubble='true']{{border:2px solid {COBALT};}}"
         f"QWidget#detailHost{{background:{PAPER};border:none;}}"
         f"QWidget#rail{{background:{PAPER};border:none;}}"

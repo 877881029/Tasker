@@ -5,11 +5,22 @@ from PySide6.QtGui import QGuiApplication
 from PySide6.QtWidgets import QLabel, QSizePolicy, QToolButton
 
 from tasker.shell.window import (
+    HTBOTTOM,
+    HTBOTTOMLEFT,
+    HTBOTTOMRIGHT,
+    HTCLIENT,
+    HTLEFT,
+    HTRIGHT,
+    HTTOP,
+    HTTOPLEFT,
+    HTTOPRIGHT,
     default_extra_width,
     edge_hit,
     expand_from_dock,
     geometry_for_screen,
+    hit_test_local,
     paper_action,
+    paper_corner_radius,
 )
 from tasker.store import Store
 from tasker.theme import DONE_BG, PAPER, dock_style
@@ -365,4 +376,60 @@ def test_paper_action_move_resize_or_ignore():
     assert paper_action(QPoint(200, 150), size, "search") == "ignore"
     assert paper_action(QPoint(200, 150), size, "itemCard") == "ignore"
     assert paper_action(QPoint(200, 150), size, "journalDocument") == "ignore"
+
+
+def test_paper_corner_radius_is_zero_when_flush_to_work_area():
+    avail = QRect(0, 40, 1920, 1040)
+    inset = QRect(200, 80, 1200, 800)
+    assert paper_corner_radius(inset, avail) == 16
+    assert paper_corner_radius(avail, avail) == 0
+    assert paper_corner_radius(QRect(1, 41, 1918, 1038), avail) == 0
+
+
+def test_hit_test_local_eight_edges():
+    size = QSize(400, 300)
+    assert hit_test_local(size, QPoint(2, 150)) == HTLEFT
+    assert hit_test_local(size, QPoint(398, 150)) == HTRIGHT
+    assert hit_test_local(size, QPoint(200, 2)) == HTTOP
+    assert hit_test_local(size, QPoint(200, 298)) == HTBOTTOM
+    assert hit_test_local(size, QPoint(1, 1)) == HTTOPLEFT
+    assert hit_test_local(size, QPoint(399, 1)) == HTTOPRIGHT
+    assert hit_test_local(size, QPoint(1, 299)) == HTBOTTOMLEFT
+    assert hit_test_local(size, QPoint(399, 299)) == HTBOTTOMRIGHT
+    assert hit_test_local(size, QPoint(200, 150)) == HTCLIENT
+    assert hit_test_local(size, QPoint(2, 150)) == HTLEFT
+    assert hit_test_local(size, QPoint(398, 150)) == HTRIGHT
+    assert hit_test_local(size, QPoint(200, 2)) == HTTOP
+    assert hit_test_local(size, QPoint(200, 298)) == HTBOTTOM
+    assert hit_test_local(size, QPoint(1, 1)) == HTTOPLEFT
+    assert hit_test_local(size, QPoint(399, 1)) == HTTOPRIGHT
+    assert hit_test_local(size, QPoint(1, 299)) == HTBOTTOMLEFT
+    assert hit_test_local(size, QPoint(399, 299)) == HTBOTTOMRIGHT
+    assert hit_test_local(size, QPoint(200, 150)) == HTCLIENT
+
+
+def test_fill_work_area_keeps_rail_and_stretches_detail(qtbot, tmp_path, monkeypatch):
+    monkeypatch.setenv("TASKER_DATA_DIR", str(tmp_path))
+    from tasker.shell.window import DockWindow
+
+    store = Store(tmp_path / "tasker.sqlite")
+    item = store.save(replace(store.create(), title="铺满"))
+    dock = DockWindow(store)
+    qtbot.addWidget(dock)
+    dock.show()
+    avail = QGuiApplication.primaryScreen().availableGeometry()
+    parked = QRect(avail.x() + avail.width() - 400, avail.y() + 80, 400, 640)
+    dock.setGeometry(parked)
+    qtbot.wait(20)
+    parked = QRect(dock.geometry())
+    dock.open_detail(item.id)
+    qtbot.wait(20)
+    dock.setGeometry(avail)
+    qtbot.wait(20)
+    assert dock.rail.width() == parked.width()
+    assert dock.x() + dock.width() == avail.x() + avail.width()
+    leftover = dock.width() - dock.rail.width() - dock.notch.width()
+    assert dock.detail_host.width() >= leftover - 8
+    assert paper_corner_radius(dock.geometry(), avail) == 0
+    assert dock.mask().isEmpty() or dock.mask().boundingRect().size() == dock.size()
 

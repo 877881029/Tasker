@@ -1,14 +1,16 @@
 from __future__ import annotations
 
+import ctypes
+import os
+from ctypes import wintypes
+
 from PySide6.QtCore import QEvent, QPoint, QRect, QSize, Qt
 from PySide6.QtGui import (
     QColor,
     QGuiApplication,
     QIcon,
     QMouseEvent,
-    QPainterPath,
     QPalette,
-    QRegion,
 )
 from PySide6.QtWidgets import (
     QApplication,
@@ -63,6 +65,17 @@ def expand_from_dock(collapsed: QRect, extra_width: int, avail: QRect) -> QRect:
 
 
 FRAME_MARGIN = 8
+HTCLIENT = 1
+HTLEFT = 10
+HTRIGHT = 11
+HTTOP = 12
+HTTOPLEFT = 13
+HTTOPRIGHT = 14
+HTBOTTOM = 15
+HTBOTTOMLEFT = 16
+HTBOTTOMRIGHT = 17
+WM_NCHITTEST = 0x0084
+WM_NCCALCSIZE = 0x0083
 MOVE_NAMES = frozenset(
     {"shell", "dock", "chrome", "listHost", "listScroll", "detailHost", "notch"}
 )
@@ -107,6 +120,49 @@ def paper_action(
     if name in MOVE_NAMES:
         return "move"
     return "ignore"
+
+
+def paper_corner_radius(geo: QRect, avail: QRect, slack: int = 2) -> int:
+    if (
+        abs(geo.x() - avail.x()) <= slack
+        and abs(geo.y() - avail.y()) <= slack
+        and abs(geo.width() - avail.width()) <= slack
+        and abs(geo.height() - avail.height()) <= slack
+    ):
+        return 0
+    return 16
+
+
+def hit_test_local(size: QSize, local: QPoint, margin: int = FRAME_MARGIN) -> int:
+    left = local.x() <= margin
+    right = local.x() >= size.width() - 1 - margin
+    top = local.y() <= margin
+    bottom = local.y() >= size.height() - 1 - margin
+    if top and left:
+        return HTTOPLEFT
+    if top and right:
+        return HTTOPRIGHT
+    if bottom and left:
+        return HTBOTTOMLEFT
+    if bottom and right:
+        return HTBOTTOMRIGHT
+    if left:
+        return HTLEFT
+    if right:
+        return HTRIGHT
+    if top:
+        return HTTOP
+    if bottom:
+        return HTBOTTOM
+    return HTCLIENT
+
+
+def _lparam_to_local(window: QWidget, x: int, y: int) -> QPoint:
+    hwnd = int(window.winId())
+    point = wintypes.POINT(int(x), int(y))
+    ctypes.windll.user32.ScreenToClient(hwnd, ctypes.byref(point))
+    dpr = float(window.devicePixelRatioF()) or 1.0
+    return QPoint(round(point.x / dpr), round(point.y / dpr))
 
 
 class ItemCard(QWidget):
@@ -392,9 +448,25 @@ class DockWindow(QWidget):
         )
 
     def _apply_round_mask(self) -> None:
-        path = QPainterPath()
-        path.addRoundedRect(self.rect().adjusted(0, 0, -1, -1), 16, 16)
-        self.setMask(QRegion(path.toFillPolygon().toPolygon()))
+        self.clearMask()
+        screen = QGuiApplication.primaryScreen()
+        avail = screen.availableGeometry() if screen else QRect(self.geometry())
+        flush = paper_corner_radius(self.geometry(), avail) == 0
+        self.shell.setProperty("flush", "true" if flush else "false")
+        self.shell.style().unpolish(self.shell)
+        self.shell.style().polish(self.shell)
+
+    def nativeEvent(self, eventType, message):  # noqa: N802
+        if os.name == "nt" and eventType in (b"windows_generic_MSG", "windows_generic_MSG"):
+            msg = wintypes.MSG.from_address(int(message))
+            if msg.message == WM_NCHITTEST:
+                x = ctypes.c_int16(msg.lParam & 0xFFFF).value
+                y = ctypes.c_int16((msg.lParam >> 16) & 0xFFFF).value
+                local = _lparam_to_local(self, x, y)
+                return True, hit_test_local(self.size(), local)
+            if msg.message == WM_NCCALCSIZE and msg.wParam:
+                return True, 0
+        return super().nativeEvent(eventType, message)
 
     def _arm_frame(self) -> None:
         self.setMinimumSize(320, 200)

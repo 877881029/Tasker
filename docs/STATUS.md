@@ -5,6 +5,20 @@ Git：`main` 应与 `origin/main` 同步（https://github.com/877881029/Tasker �
 
 ## 当前目标
 
+**纸窗可铺满工作区，四边四角仍可拉**（已完成，冻结包已重建）
+
+- 规格：`docs/superpowers/specs/2026-09-21-fill-resize-layout-design.md`
+- 计划：`docs/superpowers/plans/2026-09-21-fill-resize-layout.md`
+- 不走系统最大化；窗口可等于工作区，8 边仍可缩小
+- 铺满时圆角 0，HWND 不再用圆角 mask（角才能点到）；`WM_NCHITTEST` 8px 热区
+- 任务栏宽度保持，多出来的宽高给详情；点卡片仍不挪栏
+
+## 下一步
+
+双击桌面 Tasker：打开详情，把边和角拉到屏幕边缘，栏应还在右侧，详情铺满其余空间；再拉小也应跟手。
+
+## 上一目标（已完成）
+
 **Ctrl+S 改回编辑器写入，不再从 Chromium 读正文**（已完成，冻结包已重建）
 
 - 真正原因：打字在 `contenteditable`，保存读不到页面；多次 JS/脏标记/快照补丁后 Ctrl+S 仍清空
