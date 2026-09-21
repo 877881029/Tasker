@@ -26,7 +26,8 @@
 
 - 规格、计划、STATUS、规则变更与代码同等对待，必须进 git。  
 - 提交说明写清「为什么」（目标），不要只列文件名。  
-- 禁止把进度只留在本地：实现中途若暂停，至少推送 STATUS + 当前提交。  
+- 禁止把进度只留在本地：只要有更新就必须 `git push origin main`。  
+- 远程 https://github.com/877881029/Tasker 用 GitHub 账号 `877881029` 推送，不要用 `runqyang_amdeng`。环境若带 amdeng 的 `GH_TOKEN`，推送前清掉并 `gh auth switch --hostname github.com --user 877881029`。  
 - 推送失败（权限/账号）必须写进 STATUS 的阻塞项，不能假装已同步。
 
 ## 4. 新会话启动

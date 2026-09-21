@@ -194,4 +194,4 @@ Tasker 是 Windows 桌面个人工作台。数据 `%LOCALAPPDATA%\Tasker\tasks\`
 
 ## 阻塞项
 
-- `git push origin main` 失败：`Permission to 877881029/Tasker.git denied to runqyang_amdeng`（本地已提交，未同步远程）
+- 无。`origin/main` 用 GitHub 账号 `877881029` 推送（不要用 `runqyang_amdeng`）。
