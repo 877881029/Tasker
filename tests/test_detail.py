@@ -448,6 +448,30 @@ def test_detail_cycle_and_delete(qtbot, tmp_path, monkeypatch):
     loaded = store.get(item.id)
     assert loaded is not None and loaded.state == "urgent"
     win.delete_btn.click()
+    assert store.get(item.id) is not None
+    assert win.delete_btn.text() == "确认删除"
+    win.delete_btn.click()
     assert store.get(item.id) is None
     assert not (tmp_path / "tasks" / f"{item.id}.md").exists()
     assert not win.isVisible()
+
+
+def test_delete_confirmation_resets_on_load_and_timeout(qtbot, tmp_path, monkeypatch):
+    monkeypatch.setenv("TASKER_DATA_DIR", str(tmp_path))
+    monkeypatch.setattr(DetailWindow, "DELETE_CONFIRM_MS", 10)
+    store = Store(tmp_path)
+    first = store.create()
+    second = store.create()
+    win = DetailWindow(store)
+    qtbot.addWidget(win)
+
+    win.load(first)
+    win.delete_btn.click()
+    assert win.delete_btn.text() == "确认删除"
+    win.load(second)
+    assert win.delete_btn.text() == "删除"
+    assert store.get(first.id) is not None
+
+    win.delete_btn.click()
+    qtbot.waitUntil(lambda: win.delete_btn.text() == "删除", timeout=500)
+    assert store.get(second.id) is not None

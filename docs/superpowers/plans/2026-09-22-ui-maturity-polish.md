@@ -115,10 +115,10 @@
 - Style default and armed states only with locked theme tokens.
 - Stop/reset the timer on `load` and successful deletion.
 
-- [ ] Failing tests
-- [ ] Implementation
-- [ ] Targeted tests pass
-- [ ] Commit and push
+- [x] Failing tests
+- [x] Implementation
+- [x] Targeted tests pass
+- [x] Commit and push
 
 ### Task 5: Integrated verification and release
 

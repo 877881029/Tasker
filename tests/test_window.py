@@ -261,6 +261,9 @@ def test_title_click_opens_detail_and_delete_removes_item(qtbot, tmp_path, monke
     assert dock._detail.isVisible()
     assert dock._detail.delete_btn.text() == "删除"
     dock._detail.delete_btn.click()
+    assert store.get(item.id) is not None
+    assert dock._detail.delete_btn.text() == "确认删除"
+    dock._detail.delete_btn.click()
     assert store.get(item.id) is None
     assert not dock._detail.isVisible()
     assert dock.findChild(QLabel, "emptyState") is not None

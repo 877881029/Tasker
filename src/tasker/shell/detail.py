@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from PySide6.QtCore import QRect, Qt, Signal
+from PySide6.QtCore import QRect, Qt, QTimer, Signal
 from PySide6.QtGui import QCloseEvent, QFont, QIcon, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QCheckBox,
@@ -21,7 +21,17 @@ from tasker.journal import dump_journal, parse_journal, prepend_record
 from tasker.resources import resource_path
 from tasker.shell.journal_edit import JournalDocumentView, JournalEditor
 from tasker.store import Item, Store
-from tasker.theme import COBALT, DONE_DOT, INK, LINE, PAPER, PENDING_DOT, URGENT_DOT
+from tasker.theme import (
+    COBALT,
+    DONE_DOT,
+    INK,
+    LINE,
+    PAPER,
+    PENDING_DOT,
+    URGENT_BG,
+    URGENT_DOT,
+    URGENT_LINE,
+)
 
 
 def coalesce_journal_pull(
@@ -123,6 +133,7 @@ class JournalPane(QWidget):
 
 class DetailWindow(QWidget):
     closed = Signal()
+    DELETE_CONFIRM_MS = 4000
     _READ_STATUS = "Ctrl+I 写入 · Ctrl+S 保存 · Esc 收起"
     _WRITE_STATUS = "正在写入 · Ctrl+S 保存 · Esc 保存并收起"
     _SAVED_STATUS = "已保存 · Ctrl+I 继续写入 · Esc 收起"
@@ -174,10 +185,11 @@ class DetailWindow(QWidget):
         self.importance.clicked.connect(self._cycle)
         self.delete_btn = QPushButton("删除")
         self.delete_btn.setObjectName("deleteBtn")
-        self.delete_btn.setAccessibleName("删除任务")
-        self.delete_btn.setStyleSheet(
-            "background:transparent;color:#b91c1c;border:none;padding:10px 14px;font-size:15px;"
-        )
+        self._delete_armed = False
+        self._delete_timer = QTimer(self)
+        self._delete_timer.setSingleShot(True)
+        self._delete_timer.timeout.connect(self._reset_delete_confirmation)
+        self._reset_delete_confirmation()
         self.delete_btn.clicked.connect(self.delete_item)
 
         bar = QHBoxLayout()
@@ -209,6 +221,7 @@ class DetailWindow(QWidget):
         QShortcut(QKeySequence("Esc"), self, activated=self.close_detail)
 
     def load(self, item: Item) -> None:
+        self._reset_delete_confirmation()
         self._item_id = item.id
         self.title_edit.blockSignals(True)
         self.done.blockSignals(True)
@@ -241,10 +254,36 @@ class DetailWindow(QWidget):
     def delete_item(self) -> None:
         if not self._item_id:
             return
+        if not self._delete_armed:
+            self._delete_armed = True
+            self.delete_btn.setText("确认删除")
+            self.delete_btn.setAccessibleName("确认删除任务")
+            self.delete_btn.setStyleSheet(
+                f"QPushButton#deleteBtn{{background:{URGENT_BG};color:{INK};"
+                f"border:1px solid {URGENT_LINE};border-radius:4px;"
+                "padding:9px 13px;font-size:15px;}}"
+                f"QPushButton#deleteBtn:focus{{border:1px solid {COBALT};}}"
+            )
+            self._delete_timer.start(self.DELETE_CONFIRM_MS)
+            return
+        self._delete_timer.stop()
         self._store.delete(self._item_id)
         self._item_id = None
+        self._reset_delete_confirmation()
         self.hide()
         self.closed.emit()
+
+    def _reset_delete_confirmation(self) -> None:
+        self._delete_timer.stop()
+        self._delete_armed = False
+        self.delete_btn.setText("删除")
+        self.delete_btn.setAccessibleName("删除任务")
+        self.delete_btn.setStyleSheet(
+            f"QPushButton#deleteBtn{{background:transparent;color:{INK};"
+            "border:1px solid transparent;border-radius:4px;"
+            "padding:9px 13px;font-size:15px;}"
+            f"QPushButton#deleteBtn:focus{{border:1px solid {COBALT};}}"
+        )
 
     def _toggle_done(self, checked: bool) -> None:
         if not self._item_id:
