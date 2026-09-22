@@ -66,10 +66,10 @@
 - Wire tab order after every list refresh.
 - Use existing cobalt token for focus; do not change selected/hover semantics.
 
-- [ ] Failing tests
-- [ ] Implementation
-- [ ] Targeted tests pass
-- [ ] Commit and push
+- [x] Failing tests
+- [x] Implementation
+- [x] Targeted tests pass
+- [x] Commit and push
 
 ### Task 3: Empty and lifecycle states
 

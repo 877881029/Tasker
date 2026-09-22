@@ -138,6 +138,43 @@ def test_dock_is_paper_not_white_plates(qtbot, tmp_path, monkeypatch):
     assert "事项" not in [w.text() for w in dock.chrome.findChildren(QLabel)]
 
 
+def test_cards_and_rail_tools_are_keyboard_and_accessibility_ready(
+    qtbot, tmp_path, monkeypatch
+):
+    monkeypatch.setenv("TASKER_DATA_DIR", str(tmp_path))
+    from tasker.shell.window import DockWindow
+
+    store = Store(tmp_path / "tasker.sqlite")
+    item = store.save(replace(store.create(), title="键盘打开"))
+    dock = DockWindow(store)
+    qtbot.addWidget(dock)
+    dock.show()
+    card = dock.list_layout.itemAt(0).widget()
+
+    assert card.focusPolicy() == Qt.FocusPolicy.StrongFocus
+    assert "普通任务" in card.accessibleName()
+    assert "键盘打开" in card.accessibleName()
+    assert "Enter" in card.accessibleDescription()
+    assert "普通" in card.toolTip()
+    assert dock.add_btn.accessibleName() == "新建事项"
+    assert dock.pin_btn.accessibleName() == "置顶窗口"
+    assert dock.close_btn.accessibleName() == "隐藏到托盘"
+    assert dock.close_btn.nextInFocusChain() is card
+    assert "QWidget#itemCard:focus" in dock_style()
+    assert "QToolButton#addBtn:focus" in dock_style()
+
+    card.setFocus()
+    qtbot.keyClick(card, Qt.Key.Key_Return)
+    assert dock._detail is not None and dock._detail.isVisible()
+    assert dock._open_item_id == item.id
+    dock._detail.close_detail()
+
+    card = dock.list_layout.itemAt(0).widget()
+    card.setFocus()
+    qtbot.keyClick(card, Qt.Key.Key_Space)
+    assert dock._detail.isVisible()
+
+
 def test_pin_sets_stays_on_top(qtbot, tmp_path, monkeypatch):
     monkeypatch.setenv("TASKER_DATA_DIR", str(tmp_path))
     from PySide6.QtCore import Qt
@@ -438,4 +475,3 @@ def test_fill_work_area_keeps_rail_and_stretches_detail(qtbot, tmp_path, monkeyp
     assert dock.detail_host.width() >= leftover - 8
     assert paper_corner_radius(dock.geometry(), avail) == 0
     assert dock.mask().isEmpty() or dock.mask().boundingRect().size() == dock.size()
-

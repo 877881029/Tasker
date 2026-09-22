@@ -21,7 +21,7 @@ from tasker.journal import dump_journal, parse_journal, prepend_record
 from tasker.resources import resource_path
 from tasker.shell.journal_edit import JournalDocumentView, JournalEditor
 from tasker.store import Item, Store
-from tasker.theme import DONE_DOT, INK, PAPER, PENDING_DOT, URGENT_DOT
+from tasker.theme import COBALT, DONE_DOT, INK, LINE, PAPER, PENDING_DOT, URGENT_DOT
 
 
 def coalesce_journal_pull(
@@ -147,14 +147,22 @@ class DetailWindow(QWidget):
             self.setWindowIcon(QIcon(str(ico)))
 
         self.title_edit = QLineEdit()
+        self.title_edit.setObjectName("detailTitle")
         self.title_edit.setPlaceholderText("标题")
+        self.title_edit.setAccessibleName("任务标题")
         self.title_edit.setMinimumHeight(40)
+        self.title_edit.setStyleSheet(
+            f"QLineEdit#detailTitle{{background:transparent;color:{INK};"
+            f"border:1px solid {LINE};border-radius:4px;padding:4px 8px;}}"
+            f"QLineEdit#detailTitle:focus{{border:1px solid {COBALT};}}"
+        )
         title_font = QFont(self.title_edit.font())
         title_font.setPointSize(16)
         self.title_edit.setFont(title_font)
 
         self.done = QCheckBox("完成")
         self.done.setObjectName("doneBox")
+        self.done.setAccessibleName("完成任务")
         self.done.setStyleSheet("font-size:15px;")
         self.done.toggled.connect(self._toggle_done)
         self.importance = QToolButton()
@@ -162,9 +170,11 @@ class DetailWindow(QWidget):
         self.importance.setFixedSize(32, 32)
         self.importance.setAutoRaise(True)
         self.importance.setToolTip("切换普通 / 紧急")
+        self.importance.setAccessibleDescription("点击切换普通和紧急状态")
         self.importance.clicked.connect(self._cycle)
         self.delete_btn = QPushButton("删除")
         self.delete_btn.setObjectName("deleteBtn")
+        self.delete_btn.setAccessibleName("删除任务")
         self.delete_btn.setStyleSheet(
             "background:transparent;color:#b91c1c;border:none;padding:10px 14px;font-size:15px;"
         )
@@ -253,8 +263,11 @@ class DetailWindow(QWidget):
 
     def _paint_importance(self, item: Item) -> None:
         dot = {"pending": PENDING_DOT, "urgent": URGENT_DOT, "done": DONE_DOT}[item.state]
+        state = {"pending": "普通", "urgent": "紧急", "done": "已完成"}[item.state]
+        self.importance.setAccessibleName(f"任务状态：{state}")
         self.importance.setStyleSheet(
             f"QToolButton{{background:{dot};border:none;border-radius:16px;}}"
+            f"QToolButton:focus{{border:2px solid {COBALT};}}"
         )
 
     def closeEvent(self, event: QCloseEvent) -> None:

@@ -36,9 +36,12 @@ def dock_style() -> str:
         f"QLineEdit#search:focus{{border:1px solid {COBALT};}}"
         f"QToolButton#addBtn,QToolButton#pinBtn,QToolButton#closeDock{{background:transparent;border:none;"
         f"color:{COBALT};font-size:18px;font-weight:600;padding:4px 8px;}}"
+        f"QToolButton#addBtn:focus,QToolButton#pinBtn:focus,QToolButton#closeDock:focus{{"
+        f"border:1px solid {COBALT};border-radius:4px;}}"
         f"QToolButton#addBtn:hover,QToolButton#pinBtn:hover,QToolButton#closeDock:hover,"
         f"QToolButton#pinBtn:checked{{background:{CHROME};border-radius:4px;}}"
         f"QWidget#itemCard{{}}"
+        f"QWidget#itemCard:focus{{border:2px solid {COBALT};}}"
         f"QLabel#titleField{{background:transparent;color:{INK};border:none;"
         "padding:2px;font-size:15px;}}"
     )

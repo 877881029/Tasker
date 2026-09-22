@@ -389,6 +389,22 @@ def test_journal_status_tracks_read_write_and_saved_modes(qtbot, tmp_path, monke
     assert win.journal_status.text() == "Ctrl+I 写入 · Ctrl+S 保存 · Esc 收起"
 
 
+def test_detail_controls_expose_accessible_names(qtbot, tmp_path, monkeypatch):
+    monkeypatch.setenv("TASKER_DATA_DIR", str(tmp_path))
+    store = Store(tmp_path)
+    item = store.create()
+    win = DetailWindow(store)
+    qtbot.addWidget(win)
+    win.load(item)
+
+    assert win.title_edit.accessibleName() == "任务标题"
+    assert win.done.accessibleName() == "完成任务"
+    assert "任务状态" in win.importance.accessibleName()
+    assert win.delete_btn.accessibleName() == "删除任务"
+    assert win.journal.head_edit().accessibleName() == "任务日志编辑器"
+    assert win.journal.document_view.accessibleName() == "任务日志只读内容"
+
+
 def test_ctrl_s_keeps_text_typed_in_write_editor(qtbot, tmp_path, monkeypatch):
     monkeypatch.setenv("TASKER_DATA_DIR", str(tmp_path))
     store = Store(tmp_path)

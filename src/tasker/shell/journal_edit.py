@@ -137,6 +137,7 @@ class JournalDocumentView(QWebEngineView):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setObjectName("journalDocument")
+        self.setAccessibleName("任务日志只读内容")
         self.setMinimumSize(0, 0)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         page = TaskerWebPage(self)
@@ -264,6 +265,7 @@ class JournalEditor(QPlainTextEdit):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setObjectName("journalEditor")
+        self.setAccessibleName("任务日志编辑器")
         self.setFrameShape(QFrame.Shape.NoFrame)
         self.setLineWrapMode(QPlainTextEdit.LineWrapMode.WidgetWidth)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)

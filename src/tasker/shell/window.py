@@ -9,6 +9,7 @@ from PySide6.QtGui import (
     QColor,
     QGuiApplication,
     QIcon,
+    QKeyEvent,
     QMouseEvent,
     QPainterPath,
     QPalette,
@@ -186,6 +187,7 @@ class ItemCard(QWidget):
         self.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Maximum)
         self.setMinimumHeight(88)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         layout = QHBoxLayout(self)
         layout.setContentsMargins(14, 12, 14, 12)
         layout.setSpacing(10)
@@ -193,11 +195,13 @@ class ItemCard(QWidget):
         self.importance.setObjectName("importance")
         self.importance.setFixedSize(20, 20)
         self.importance.setAutoRaise(True)
+        self.importance.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.importance.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
         self.title = QLabel()
         self.title.setObjectName("titleField")
         self.title.setWordWrap(True)
         self.title.setMinimumHeight(72)
+        self.title.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.title.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
         layout.addWidget(self.importance, 0, Qt.AlignmentFlag.AlignTop)
         layout.addWidget(self.title, 1)
@@ -217,6 +221,13 @@ class ItemCard(QWidget):
             return
         super().mousePressEvent(event)
 
+    def keyPressEvent(self, event: QKeyEvent) -> None:
+        if event.key() in {Qt.Key.Key_Return, Qt.Key.Key_Enter, Qt.Key.Key_Space}:
+            self._on_open(self.item_id)
+            event.accept()
+            return
+        super().keyPressEvent(event)
+
     def apply_item(self, item: Item) -> None:
         edge = f"border:2px solid {COBALT};" if self._selected else ""
         self.setStyleSheet(
@@ -231,6 +242,12 @@ class ItemCard(QWidget):
         self.title.setText(text or "标题")
         color = INK if text else MUTED
         self.title.setStyleSheet(f"color:{color};font-size:15px;")
+        state = {"pending": "普通", "urgent": "紧急", "done": "已完成"}[item.state]
+        name = text or "无标题"
+        self.setAccessibleName(f"{state}任务：{name}")
+        self.setAccessibleDescription("按 Enter 或空格打开详情")
+        self.setToolTip(f"{state} · {name}")
+        self.importance.setAccessibleName(f"任务状态：{state}")
 
 
 class ChromeBar(QWidget):
@@ -291,6 +308,7 @@ class DockWindow(QWidget):
         self.search = QLineEdit()
         self.search.setObjectName("search")
         self.search.setPlaceholderText("查找…")
+        self.search.setAccessibleName("搜索事项")
         self.search.textChanged.connect(self.refresh)
         self.add_btn = QToolButton()
         self.add_btn.setObjectName("addBtn")
@@ -298,6 +316,7 @@ class DockWindow(QWidget):
         self.add_btn.setText("+")
         self.add_btn.setFixedSize(32, 32)
         self.add_btn.setToolTip("新建事项")
+        self.add_btn.setAccessibleName("新建事项")
         self.add_btn.clicked.connect(self._add)
         self.pin_btn = QToolButton()
         self.pin_btn.setObjectName("pinBtn")
@@ -309,6 +328,7 @@ class DockWindow(QWidget):
             self.pin_btn.setIconSize(QSize(18, 18))
         self.pin_btn.setFixedSize(32, 32)
         self.pin_btn.setToolTip("钉在其它窗口上面")
+        self.pin_btn.setAccessibleName("置顶窗口")
         self.pin_btn.setCheckable(True)
         self.pin_btn.toggled.connect(self._toggle_pin)
         self.close_btn = QToolButton()
@@ -317,11 +337,15 @@ class DockWindow(QWidget):
         self.close_btn.setText("×")
         self.close_btn.setFixedSize(32, 32)
         self.close_btn.setToolTip("关闭")
+        self.close_btn.setAccessibleName("隐藏到托盘")
         self.close_btn.clicked.connect(self._close_dock)
         header.addWidget(self.search, 1)
         header.addWidget(self.add_btn)
         header.addWidget(self.pin_btn)
         header.addWidget(self.close_btn)
+        QWidget.setTabOrder(self.search, self.add_btn)
+        QWidget.setTabOrder(self.add_btn, self.pin_btn)
+        QWidget.setTabOrder(self.pin_btn, self.close_btn)
 
         self.list_host = QWidget()
         self.list_host.setObjectName("listHost")
@@ -570,10 +594,13 @@ class DockWindow(QWidget):
             child = self.list_layout.takeAt(0)
             if child.widget():
                 child.widget().deleteLater()
+        previous: QWidget = self.close_btn
         for item in self._store.list_visible(query):
             card = ItemCard(self._store, item, self.open_detail)
             card.set_selected(item.id == self._open_item_id)
             self.list_layout.addWidget(card)
+            QWidget.setTabOrder(previous, card)
+            previous = card
         self._arm_frame()
 
     def open_detail(self, item_id: str) -> None:
