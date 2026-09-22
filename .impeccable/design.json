@@ -1,0 +1,152 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-22T16:45:00+08:00",
+  "title": "Design System: Tasker",
+  "extensions": {
+    "colorMeta": {
+      "paper": {
+        "role": "neutral",
+        "displayName": "Warm Paper",
+        "canonical": "#f4efe6",
+        "tonalRamp": ["#2a251e", "#50483c", "#786e5f", "#a39889", "#c9c0b3", "#e0d9ce", "#f4efe6", "#fffdf9"]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Opaque Ink",
+        "canonical": "#1c1915",
+        "tonalRamp": ["#1c1915", "#3a342c", "#5a5145", "#7b7061", "#9e9282", "#c0b7aa", "#e1dcd4", "#f8f6f2"]
+      },
+      "cobalt": {
+        "role": "primary",
+        "displayName": "Working Cobalt",
+        "canonical": "#2563eb",
+        "tonalRamp": ["#081a43", "#0d2e72", "#1747a4", "#2563eb", "#5b87ef", "#91acf4", "#c6d4fa", "#eef3ff"]
+      },
+      "pending-paper": {
+        "role": "secondary",
+        "displayName": "Pending Paper",
+        "canonical": "#ecfdf3",
+        "tonalRamp": ["#10291b", "#1c4c30", "#34704a", "#5b9670", "#8bbba0", "#b8dec7", "#ecfdf3", "#f8fffb"]
+      },
+      "urgent-paper": {
+        "role": "secondary",
+        "displayName": "Urgent Paper",
+        "canonical": "#fef2f2",
+        "tonalRamp": ["#321313", "#602424", "#913c3c", "#be5d5d", "#dd8d8d", "#efbcbc", "#fef2f2", "#fffafa"]
+      },
+      "done-paper": {
+        "role": "neutral",
+        "displayName": "Done Paper",
+        "canonical": "#e5e7eb",
+        "tonalRamp": ["#20242b", "#3e444e", "#606875", "#858d99", "#abb1ba", "#cdd1d7", "#e5e7eb", "#f7f8f9"]
+      }
+    },
+    "typographyMeta": {
+      "title": {
+        "displayName": "Task Title",
+        "purpose": "Editable title in the detail header."
+      },
+      "body": {
+        "displayName": "Journal Body",
+        "purpose": "Stable reading and writing typography."
+      },
+      "card": {
+        "displayName": "Task Card",
+        "purpose": "Wrapping titles in the compact rail."
+      },
+      "stamp": {
+        "displayName": "Journal Stamp",
+        "purpose": "Aligned timestamp metadata."
+      }
+    },
+    "shadows": [],
+    "motion": [],
+    "breakpoints": []
+  },
+  "components": [
+    {
+      "name": "Search Field",
+      "kind": "input",
+      "refersTo": "search-field",
+      "description": "A compact transparent search field with a cobalt focus line.",
+      "html": "<input class=\"ds-search\" placeholder=\"查找…\" />",
+      "css": ".ds-search { width: 240px; height: 32px; box-sizing: border-box; background: transparent; color: #1c1915; border: 1px solid #e4d9c7; border-radius: 4px; padding: 4px 8px; font: 15px Candara, Calibri, 'Segoe UI', sans-serif; outline: none; } .ds-search:focus-visible { border-color: #2563eb; }"
+    },
+    {
+      "name": "Tool Button",
+      "kind": "button",
+      "refersTo": "tool-button",
+      "description": "A quiet cobalt action that reveals a paper-chrome plate on hover.",
+      "html": "<button class=\"ds-tool\" aria-label=\"Add task\">+</button>",
+      "css": ".ds-tool { width: 32px; height: 32px; padding: 4px 8px; background: transparent; color: #2563eb; border: 0; border-radius: 4px; font: 600 18px Candara, Calibri, 'Segoe UI', sans-serif; } .ds-tool:hover { background: #ebe4d8; } .ds-tool:focus-visible { outline: 2px solid #2563eb; outline-offset: 1px; } .ds-tool:active { color: #1d4ed8; }"
+    },
+    {
+      "name": "Pending Task Card",
+      "kind": "card",
+      "refersTo": "task-card",
+      "description": "A pale state-tinted card with one solid status dot and wrapping title.",
+      "html": "<article class=\"ds-card\"><span class=\"ds-dot\" aria-hidden=\"true\"></span><span class=\"ds-card-title\">Prepare the next working session</span></article>",
+      "css": ".ds-card { width: 290px; min-height: 88px; box-sizing: border-box; display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; background: #ecfdf3; color: #1c1915; border: 1px solid #bbf7d0; border-radius: 8px; font: 15px/1.4 Candara, Calibri, 'Segoe UI', sans-serif; } .ds-card:hover { border-color: #2563eb; } .ds-card:focus-visible { outline: 2px solid #2563eb; outline-offset: 1px; } .ds-dot { width: 20px; height: 20px; flex: 0 0 20px; border-radius: 50%; background: #22c55e; }"
+    },
+    {
+      "name": "Journal Record",
+      "kind": "custom",
+      "refersTo": "journal-body",
+      "description": "A fixed timestamp column paired with a readable continuous work note.",
+      "html": "<div class=\"ds-record\"><time class=\"ds-stamp\">260922.4PM</time><p class=\"ds-note\">Continue the current task without losing the previous context.</p></div>",
+      "css": ".ds-record { width: 560px; display: grid; grid-template-columns: 7.75rem minmax(0, 1fr); gap: 12px; padding: 8px 20px 32px 12px; background: #f4efe6; color: #1c1915; font-family: Candara, Calibri, 'Segoe UI', sans-serif; } .ds-stamp { color: #2563eb; font-size: 13px; font-weight: 600; line-height: 1.72; text-align: right; white-space: nowrap; } .ds-note { min-width: 0; margin: 0; font-size: 16px; line-height: 1.72; overflow-wrap: anywhere; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "桌边工作纸",
+    "overview": "Tasker should feel like a warm sheet of working paper kept beside the monitor: immediately available, easy to scan, and calm enough to remain present throughout the day. Its identity comes from quiet paper, dark ink, one disciplined cobalt accent, and small state marks rather than from application chrome.\n\nThe interface is warm, restrained, and clear. It rejects dashboard density, glass effects, ornamental motion, and decorative surfaces that compete with the user's actual work. Refinement should improve rhythm, hierarchy, focus, and feedback without making Tasker feel like a project-management suite.",
+    "keyCharacteristics": [
+      "Warm paper and opaque ink instead of white software panels.",
+      "Flat surfaces separated by spacing, fine lines, and state color.",
+      "A single cobalt interaction voice used for focus, selection, and the newest journal stamp.",
+      "Compact controls around a generous reading and writing surface.",
+      "Native Windows behavior with minimal visible chrome."
+    ],
+    "rules": [
+      {
+        "name": "The One Blue Voice Rule",
+        "body": "Cobalt means interaction, focus, selection, or recency. Do not use it as broad decoration.",
+        "section": "colors"
+      },
+      {
+        "name": "The State Tint Rule",
+        "body": "Task state colors belong to cards and state dots; they do not recolor the shell, journal, or controls.",
+        "section": "colors"
+      },
+      {
+        "name": "The Reading Surface Rule",
+        "body": "Journal reading and writing use the same family, ink, 16px scale, and 1.72 line height so mode changes do not shift perceived typography.",
+        "section": "typography"
+      },
+      {
+        "name": "The Parked Rail Rule",
+        "body": "Opening, closing, or resizing detail must not make the rail jump away from its current desktop position.",
+        "section": "layout"
+      },
+      {
+        "name": "The Flat Paper Rule",
+        "body": "Do not add glass, blur, gradients, ambient shadows, or floating-card stacks. If an interaction is unclear, repair its spacing, border, focus, or state feedback first.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do preserve the continuous Warm Paper surface across shell, detail, editor, and reader.",
+      "Do use spacing, alignment, and type hierarchy before adding visual decoration.",
+      "Do keep cobalt rare and meaningful.",
+      "Do test long titles, long journal lines, empty states, keyboard focus, and Windows display scaling.",
+      "Do keep read and write typography visually stable."
+    ],
+    "donts": [
+      "Don't introduce dashboard panels, navigation sidebars, analytics, project hierarchy, or collaboration chrome.",
+      "Don't add glass effects, gradients, ornamental animation, or permanent shadows.",
+      "Don't create a second palette or change the locked token values.",
+      "Don't add inline actions to task cards or visible Save/Close buttons to the detail.",
+      "Don't change the Store/Journal interfaces, Markdown schema, keyboard chords, object names, or tray lifecycle as part of visual polish."
+    ]
+  }
+}
