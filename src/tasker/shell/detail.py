@@ -7,6 +7,7 @@ from PySide6.QtGui import QCloseEvent, QFont, QIcon, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QCheckBox,
     QHBoxLayout,
+    QLabel,
     QLineEdit,
     QPlainTextEdit,
     QPushButton,
@@ -122,6 +123,9 @@ class JournalPane(QWidget):
 
 class DetailWindow(QWidget):
     closed = Signal()
+    _READ_STATUS = "Ctrl+I 写入 · Ctrl+S 保存 · Esc 收起"
+    _WRITE_STATUS = "正在写入 · Ctrl+S 保存 · Esc 保存并收起"
+    _SAVED_STATUS = "已保存 · Ctrl+I 继续写入 · Esc 收起"
 
     def __init__(self, store: Store, parent=None) -> None:
         super().__init__(parent)
@@ -173,9 +177,20 @@ class DetailWindow(QWidget):
         bar.addWidget(self.done)
         bar.addWidget(self.delete_btn)
 
+        self.journal_status = QLabel(self._READ_STATUS)
+        self.journal_status.setObjectName("journalStatus")
+        self.journal_status.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.journal_status.setTextInteractionFlags(Qt.TextInteractionFlag.NoTextInteraction)
+        self.journal_status.setAccessibleName("日志操作状态")
+        self.journal_status.setStyleSheet(
+            f"color:{INK};font-size:13px;padding:2px 0 4px 44px;"
+        )
+
         self.journal = JournalPane()
         layout = QVBoxLayout(self)
+        layout.setSpacing(8)
         layout.addLayout(bar)
+        layout.addWidget(self.journal_status)
         layout.addWidget(self.journal, 1)
 
         self.title_edit.editingFinished.connect(self._save_title)
@@ -193,13 +208,16 @@ class DetailWindow(QWidget):
         self.title_edit.blockSignals(False)
         self.done.blockSignals(False)
         self.journal.load(item.body_md)
+        self.journal_status.setText(self._READ_STATUS)
 
     def begin_write(self) -> None:
         self.journal.begin_write()
+        self.journal_status.setText(self._WRITE_STATUS)
 
     def save_keep_open(self) -> None:
         self.save_all()
         self.journal.set_all_readonly()
+        self.journal_status.setText(self._SAVED_STATUS)
 
     def save_all(self) -> None:
         self._save_title()

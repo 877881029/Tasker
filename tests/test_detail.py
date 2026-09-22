@@ -366,6 +366,29 @@ def test_ctrl_s_writes_and_stays_readonly(qtbot, tmp_path, monkeypatch):
     assert getattr(win, "close_btn", None) is None
 
 
+def test_journal_status_tracks_read_write_and_saved_modes(qtbot, tmp_path, monkeypatch):
+    monkeypatch.setenv("TASKER_DATA_DIR", str(tmp_path))
+    store = Store(tmp_path)
+    first = store.create()
+    second = store.create()
+    win = DetailWindow(store)
+    qtbot.addWidget(win)
+
+    win.load(first)
+    assert win.journal_status.text() == "Ctrl+I 写入 · Ctrl+S 保存 · Esc 收起"
+    assert win.journal_status.focusPolicy() == Qt.FocusPolicy.NoFocus
+
+    win.begin_write()
+    assert win.journal_status.text() == "正在写入 · Ctrl+S 保存 · Esc 保存并收起"
+
+    _insert_head(win, "状态反馈")
+    win.save_keep_open()
+    assert win.journal_status.text() == "已保存 · Ctrl+I 继续写入 · Esc 收起"
+
+    win.load(second)
+    assert win.journal_status.text() == "Ctrl+I 写入 · Ctrl+S 保存 · Esc 收起"
+
+
 def test_ctrl_s_keeps_text_typed_in_write_editor(qtbot, tmp_path, monkeypatch):
     monkeypatch.setenv("TASKER_DATA_DIR", str(tmp_path))
     store = Store(tmp_path)

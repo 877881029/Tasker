@@ -36,10 +36,10 @@
 - Keep the label keyboard-neutral and accessible.
 - Update only from `load`, `begin_write`, and `save_keep_open`.
 
-- [ ] Failing tests
-- [ ] Implementation
-- [ ] Targeted tests pass
-- [ ] Commit and push
+- [x] Failing tests
+- [x] Implementation
+- [x] Targeted tests pass
+- [x] Commit and push
 
 ### Task 2: Keyboard and accessibility
 
