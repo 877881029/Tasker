@@ -132,10 +132,42 @@ def test_dock_is_paper_not_white_plates(qtbot, tmp_path, monkeypatch):
     assert dock.pin_btn.text() == ""
     assert not dock.pin_btn.icon().isNull()
     assert dock.close_btn.text() == "×"
+    assert dock.close_btn.toolTip() == "隐藏到托盘"
     assert dock.search.styleSheet() == "" or "white" not in dock.styleSheet()
     assert PAPER in dock.styleSheet()
     assert dock.chrome.layout().itemAt(0).widget() is dock.search
     assert "事项" not in [w.text() for w in dock.chrome.findChildren(QLabel)]
+
+
+def test_empty_and_search_states_are_distinct(qtbot, tmp_path, monkeypatch):
+    monkeypatch.setenv("TASKER_DATA_DIR", str(tmp_path))
+    from tasker.shell.window import DockWindow
+
+    store = Store(tmp_path / "tasker.sqlite")
+    dock = DockWindow(store)
+    qtbot.addWidget(dock)
+
+    empty = dock.findChild(QLabel, "emptyState")
+    assert empty is not None
+    assert "还没有事项" in empty.text()
+    assert "点 + 开始记录" in empty.text()
+    assert empty.focusPolicy() == Qt.FocusPolicy.NoFocus
+    assert store.list_visible() == []
+
+    store.save(replace(store.create(), title="PDF 默认应用"))
+    dock.refresh()
+    assert dock.findChild(QLabel, "emptyState") is None
+
+    dock.search.setText("不存在")
+    no_match = dock.findChild(QLabel, "emptyState")
+    assert no_match is not None
+    assert "没有找到匹配事项" in no_match.text()
+    assert "换个关键词试试" in no_match.text()
+    assert len(store.list_visible()) == 1
+
+    dock.search.setText("PDF")
+    assert dock.findChild(QLabel, "emptyState") is None
+    assert dock.list_layout.count() == 1
 
 
 def test_cards_and_rail_tools_are_keyboard_and_accessibility_ready(
@@ -231,7 +263,7 @@ def test_title_click_opens_detail_and_delete_removes_item(qtbot, tmp_path, monke
     dock._detail.delete_btn.click()
     assert store.get(item.id) is None
     assert not dock._detail.isVisible()
-    assert dock.list_layout.count() == 0
+    assert dock.findChild(QLabel, "emptyState") is not None
 
 
 def test_empty_notes_collapse_to_one(qtbot, tmp_path, monkeypatch):

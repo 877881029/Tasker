@@ -90,10 +90,10 @@
 - Derive copy only from `query` and result count.
 - Keep copy in the normal list layout with no click handling or new object model.
 
-- [ ] Failing tests
-- [ ] Implementation
-- [ ] Targeted tests pass
-- [ ] Commit and push
+- [x] Failing tests
+- [x] Implementation
+- [x] Targeted tests pass
+- [x] Commit and push
 
 ### Task 4: Inline safe deletion
 

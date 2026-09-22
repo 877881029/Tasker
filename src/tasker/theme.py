@@ -31,6 +31,8 @@ def dock_style() -> str:
         f"QWidget#itemCard[selected='true']{{border:2px solid {COBALT};}}"
         f"QWidget#listHost{{background:{PAPER};border:none;}}"
         f"QScrollArea#listScroll{{background:{PAPER};border:none;}}"
+        f"QLabel#emptyState{{background:transparent;color:{INK};"
+        "font-size:15px;padding:28px 20px;}}"
         f"QLineEdit#search{{background:transparent;color:{INK};"
         f"border:1px solid {LINE};border-radius:4px;padding:4px 8px;}}"
         f"QLineEdit#search:focus{{border:1px solid {COBALT};}}"

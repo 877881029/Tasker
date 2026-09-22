@@ -336,7 +336,7 @@ class DockWindow(QWidget):
         self.close_btn.setAutoRaise(True)
         self.close_btn.setText("×")
         self.close_btn.setFixedSize(32, 32)
-        self.close_btn.setToolTip("关闭")
+        self.close_btn.setToolTip("隐藏到托盘")
         self.close_btn.setAccessibleName("隐藏到托盘")
         self.close_btn.clicked.connect(self._close_dock)
         header.addWidget(self.search, 1)
@@ -592,10 +592,28 @@ class DockWindow(QWidget):
         query = self.search.text()
         while self.list_layout.count():
             child = self.list_layout.takeAt(0)
-            if child.widget():
-                child.widget().deleteLater()
+            widget = child.widget()
+            if widget is not None:
+                widget.setParent(None)
+                widget.deleteLater()
+        items = self._store.list_visible(query)
+        if not items:
+            empty = QLabel()
+            empty.setObjectName("emptyState")
+            empty.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+            empty.setAlignment(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop)
+            empty.setWordWrap(True)
+            if query.strip():
+                empty.setText("没有找到匹配事项\n换个关键词试试")
+                empty.setAccessibleName("没有找到匹配事项")
+            else:
+                empty.setText("还没有事项\n点 + 开始记录")
+                empty.setAccessibleName("还没有事项")
+            self.list_layout.addWidget(empty)
+            self._arm_frame()
+            return
         previous: QWidget = self.close_btn
-        for item in self._store.list_visible(query):
+        for item in items:
             card = ItemCard(self._store, item, self.open_detail)
             card.set_selected(item.id == self._open_item_id)
             self.list_layout.addWidget(card)
