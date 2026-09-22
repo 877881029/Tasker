@@ -2,14 +2,21 @@ $ErrorActionPreference = "Stop"
 $Root = Resolve-Path (Join-Path $PSScriptRoot "..")
 Set-Location $Root
 
-if (-not (Test-Path ".venv\Scripts\python.exe")) {
-    py -3.12 -m venv .venv
+$VenvPath = if ($env:TASKER_BUILD_VENV) {
+    [System.IO.Path]::GetFullPath($env:TASKER_BUILD_VENV)
+} else {
+    Join-Path $Root ".venv"
+}
+$PythonPath = Join-Path $VenvPath "Scripts\python.exe"
+
+if (-not (Test-Path $PythonPath)) {
+    py -3.12 -m venv $VenvPath
     if ($LASTEXITCODE -ne 0) {
         throw "Failed to create the Python virtual environment (exit $LASTEXITCODE)"
     }
 }
 
-$Python = Resolve-Path ".venv\Scripts\python.exe"
+$Python = Resolve-Path $PythonPath
 & $Python -m pip install --upgrade pip
 if ($LASTEXITCODE -ne 0) {
     throw "Failed to upgrade pip (exit $LASTEXITCODE)"

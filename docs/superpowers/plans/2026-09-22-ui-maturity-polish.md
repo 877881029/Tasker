@@ -136,10 +136,16 @@
 - Run the Impeccable native critique checklist once; do not run the web detector again.
 - Stop any running `Tasker.exe`, run `scripts/build_windows.ps1`, and overwrite the desktop shortcut.
 
-- [ ] Targeted tests pass
-- [ ] Full suite passes
-- [ ] Native visual pass passes
-- [ ] Frozen EXE rebuilt
-- [ ] Desktop shortcut refreshed
-- [ ] STATUS marked complete
-- [ ] Final commit and push
+- [x] Targeted tests pass
+- [x] Full suite passes
+- [x] Native visual pass passes
+- [x] Frozen EXE rebuilt
+- [x] Desktop shortcut refreshed
+- [x] STATUS marked complete
+- [x] Final commit and push
+
+Verification completed with Python 3.12: `93 passed` with exit code 0. The native
+pass covered the collapsed rail, no-results state, expanded detail, Ctrl+I write
+mode, Ctrl+S saved state, and the timed first-step delete confirmation. The frozen
+package is installed at `%LOCALAPPDATA%\Programs\Tasker` and the desktop shortcut
+targets that stable path.

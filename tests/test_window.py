@@ -129,6 +129,7 @@ def test_dock_is_paper_not_white_plates(qtbot, tmp_path, monkeypatch):
     assert "border-radius:16px" in css
     dock = DockWindow(Store(tmp_path / "tasker.sqlite"))
     qtbot.addWidget(dock)
+    assert dock.testAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
     assert dock.pin_btn.text() == ""
     assert not dock.pin_btn.icon().isNull()
     assert dock.close_btn.text() == "×"

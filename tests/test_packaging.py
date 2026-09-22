@@ -20,6 +20,8 @@ def test_tasker_spec_onedir_icon_and_webengine() -> None:
 
 def test_build_windows_script_runs_tasker_spec() -> None:
     script = (ROOT / "scripts" / "build_windows.ps1").read_text(encoding="utf-8")
+    assert "TASKER_BUILD_VENV" in script
+    assert "Join-Path $VenvPath \"Scripts\\python.exe\"" in script
     assert '& $Python -m pip install -e ".[dev]" pyinstaller' in script
     assert '& $Python scripts\\generate_icons.py' in script
     assert (

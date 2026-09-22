@@ -296,6 +296,7 @@ class DockWindow(QWidget):
         self.setWindowTitle("Tasker")
         self.setObjectName("dock")
         self.setWindowFlags(self._frame_flags(False))
+        self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
         ico = resource_path("assets", "icons", "tasker.ico")
         if ico.exists():
