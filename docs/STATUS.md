@@ -5,24 +5,26 @@ Git：`main` 应与 `origin/main` 同步（https://github.com/877881029/Tasker �
 
 ## 当前目标
 
-**UI 成熟度打磨**（已完成，冻结包已重建并部署）
+**顶部工具栏表面精修**（规格已确认，待实现）
 
-- 日志读/写/已保存状态可见，保留 `Ctrl+I / Ctrl+S / Esc`
-- 卡片支持键盘焦点及 Enter/Space，控件补齐无障碍名称和确定性 tab 顺序
-- 无事项、无搜索结果与托盘隐藏语义明确
-- 删除在原标题栏内四秒两步确认，不增加弹窗或新按钮
-- 顶层纸窗关闭时销毁完整 Qt 子树，Python 3.12 全量测试退出码恢复为 0
-- Windows 构建脚本支持 `TASKER_BUILD_VENV` 短路径环境
+- 去掉搜索框的系统默认输入框感，改为完整圆角浅纸内嵌面
+- 统一搜索、添加、置顶和隐藏的高度、圆角、边线与交互状态
+- 保持锁定色板、shell/card 圆角、功能、快捷键、数据和公开接口不变
 - Impeccable 视觉北极星：「桌边工作纸」
-- 规格：`docs/superpowers/specs/2026-09-22-ui-maturity-polish-design.md`
-- 计划：`docs/superpowers/plans/2026-09-22-ui-maturity-polish.md`
+- 规格：`docs/superpowers/specs/2026-09-23-toolbar-surface-polish-design.md`
 - 产品与视觉事实：`PRODUCT.md`、`DESIGN.md`
-- 验证：Python 3.12 `93 passed`；冻结包与图标完整；原生折叠、无结果、展开、写入、保存和删除确认状态通过
-- 部署：`%LOCALAPPDATA%\Programs\Tasker\Tasker.exe`；桌面 `Tasker.lnk` 已覆盖
 
 ## 下一步
 
-双击桌面 Tasker 做日常验收：卡片可用键盘打开，Ctrl+I/Ctrl+S 状态提示正确，删除第一次只进入“确认删除”且四秒后复位。
+按 TDD 实现顶栏视觉规格，原生截图验证 150% 缩放效果，重建冻结包并刷新桌面快捷方式。
+
+## 上一目标（已完成）
+
+**UI 成熟度打磨**（已完成，冻结包已重建并部署）
+
+- 日志状态、键盘/无障碍、空状态、托盘语义和两步删除确认已完成
+- Python 3.12 全量测试 `93 passed`，退出码 0
+- 部署：`%LOCALAPPDATA%\Programs\Tasker\Tasker.exe`
 
 ## 上一目标（已完成）
 
