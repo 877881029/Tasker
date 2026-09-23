@@ -41,7 +41,8 @@ typography:
     fontWeight: 600
     lineHeight: 1.72
 rounded:
-  control: "4px"
+  search: "12px"
+  tool: "10px"
   card: "8px"
   shell: "16px"
 spacing:
@@ -55,18 +56,18 @@ spacing:
   reading-tail: "48px"
 components:
   search-field:
-    backgroundColor: "transparent"
+    backgroundColor: "{colors.code-paper}"
     textColor: "{colors.ink}"
     typography: "{typography.card}"
-    rounded: "{rounded.control}"
-    padding: "4px 8px"
-    height: "32px"
+    rounded: "{rounded.search}"
+    padding: "0 12px"
+    height: "38px"
   tool-button:
-    backgroundColor: "transparent"
-    textColor: "{colors.cobalt}"
-    rounded: "{rounded.control}"
-    padding: "4px 8px"
-    size: "32px"
+    backgroundColor: "{colors.code-paper}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.tool}"
+    padding: "0"
+    size: "36px"
   task-card:
     backgroundColor: "{colors.pending-paper}"
     textColor: "{colors.ink}"
@@ -143,7 +144,7 @@ The palette combines warm paper neutrals with one cool cobalt accent and quiet t
 
 The collapsed shell occupies the right third of the available work area with a 320px minimum. Opening a task keeps the rail parked and grows the same shell leftward; the detail receives the additional width while the rail preserves its previous width.
 
-The rail uses a compact control row followed by a top-aligned vertical card list. Controls use a 32px footprint, 8px gaps, and 12px edge spacing. Cards use 12px vertical and 14px horizontal internal padding with a 10px gap between the state dot and title.
+The rail uses a compact control row followed by a top-aligned vertical card list. The search well is 38px tall; tools use a 36px footprint, 8px gaps, and 14px edge spacing. Cards use 12px vertical and 14px horizontal internal padding with a 10px gap between the state dot and title.
 
 The detail is a generous paper field. Its header groups the state dot and title as the primary cluster; completion and deletion remain secondary actions. The journal uses a fixed 118px timestamp gutter or a 7.75rem grid column, followed by a flexible text column. Long text wraps only inside the text column.
 
@@ -168,15 +169,15 @@ The shell radius disappears only when the window is flush with the Windows work 
 ## Components
 
 ### Tool Buttons
-- **Shape:** Compact rounded square footprint (32px with 4px hover plate).
-- **Default:** Transparent paper with cobalt icon or glyph.
+- **Shape:** Compact rounded square footprint (36px with a 10px radius).
+- **Default:** Code Paper fill, Paper Hairline border, and consistent 18px vector glyphs.
 - **Hover / Checked:** Paper Chrome plate; no shadow or movement.
-- **Focus:** A visible cobalt keyboard focus treatment must remain available.
+- **Focus:** A complete 2px cobalt keyboard ring.
 
 ### Search Field
-- **Shape:** Restrained rounded rectangle (4px).
-- **Default:** Transparent fill, Paper Hairline border, Opaque Ink.
-- **Focus:** Hairline changes to Working Cobalt without changing geometry.
+- **Shape:** Soft inset paper well (12px radius, 38px height).
+- **Default:** Code Paper fill, Paper Hairline border, Opaque Ink, Quiet Ink placeholder.
+- **Focus:** A complete 2px Working Cobalt ring without changing geometry.
 - **Copy:** Short placeholder, currently `查找…`.
 
 ### Task Cards

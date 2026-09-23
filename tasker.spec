@@ -29,6 +29,8 @@ a = Analysis(
     + [
         (str(ROOT / "assets/icons/tasker.ico"), "assets/icons"),
         (str(ROOT / "assets/icons/tasker-t.svg"), "assets/icons"),
+        (str(ROOT / "assets/icons/add.svg"), "assets/icons"),
+        (str(ROOT / "assets/icons/hide.svg"), "assets/icons"),
         (str(ROOT / "assets/icons/pin.svg"), "assets/icons"),
         (str(ROOT / "VERSION"), "."),
     ],

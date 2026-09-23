@@ -11,6 +11,8 @@ def test_tasker_spec_onedir_icon_and_webengine() -> None:
     assert "COLLECT(" in spec
     assert "assets/icons/tasker.ico" in normalized
     assert "assets/icons/tasker-t.svg" in normalized
+    assert "assets/icons/add.svg" in normalized
+    assert "assets/icons/hide.svg" in normalized
     assert "assets/icons/pin.svg" in normalized
     assert "QtSvg" in spec
     assert "QtWebEngineProcess.exe" in spec

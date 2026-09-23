@@ -30,6 +30,12 @@ def test_theme_tokens_are_locked():
     assert theme.DONE_DOT == "#9ca3af"
     css = theme.dock_style()
     assert "border-radius:16px" in css
+    assert f"QLineEdit#search{{background:{theme.CARD}" in css
+    assert "border-radius:12px" in css
+    assert "QLineEdit#search:focus" in css and "border:2px solid" in css
+    assert "border-radius:10px" in css
+    assert "QToolButton#pinBtn:checked" in css
+    assert "QToolButton#addBtn:pressed" in css
     assert "text-decoration:none" in theme.card_style("pending")
     assert "line-through" not in theme.card_style("done")
 

@@ -16,8 +16,8 @@ regression while making every control share one surface language.
   ring, 10px tool radius, and hover/checked/pressed treatments.
 - Assert existing object names, accessible names, and tab order remain intact.
 
-- [ ] Failing tests
-- [ ] Commit and push
+- [x] Failing tests
+- [x] Commit and push
 
 ## Task 2: Implement the unified first row
 
@@ -29,9 +29,9 @@ regression while making every control share one surface language.
 - Replace stock-like search and bare tool styles with the approved paper surfaces.
 - Update the documented component dimensions and states.
 
-- [ ] Implementation
-- [ ] Targeted tests pass
-- [ ] Commit and push
+- [x] Implementation
+- [x] Targeted tests pass
+- [x] Commit and push
 
 ## Task 3: Release verification
 
@@ -48,4 +48,3 @@ regression while making every control share one surface language.
 - [ ] Frozen package rebuilt and desktop shortcut refreshed
 - [ ] STATUS completed
 - [ ] Final commit and push
-

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+  <title>Add</title>
+  <g fill="none" stroke="#1C1915" stroke-width="1.8" stroke-linecap="round">
+    <path d="M12 5.5v13"/>
+    <path d="M5.5 12h13"/>
+  </g>
+</svg>

@@ -1,7 +1,7 @@
 from dataclasses import replace
 
 from PySide6.QtCore import QEvent, QPoint, QRect, QSize, Qt
-from PySide6.QtGui import QGuiApplication
+from PySide6.QtGui import QGuiApplication, QPalette
 from PySide6.QtWidgets import QLabel, QSizePolicy, QToolButton
 
 from tasker.shell.window import (
@@ -132,8 +132,16 @@ def test_dock_is_paper_not_white_plates(qtbot, tmp_path, monkeypatch):
     assert dock.testAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
     assert dock.pin_btn.text() == ""
     assert not dock.pin_btn.icon().isNull()
-    assert dock.close_btn.text() == "×"
+    assert dock.add_btn.text() == ""
+    assert not dock.add_btn.icon().isNull()
+    assert dock.close_btn.text() == ""
+    assert not dock.close_btn.icon().isNull()
     assert dock.close_btn.toolTip() == "隐藏到托盘"
+    assert dock.search.height() == 38
+    assert dock.search.palette().color(QPalette.ColorRole.PlaceholderText).name() == "#8a8176"
+    assert dock.add_btn.size() == QSize(36, 36)
+    assert dock.pin_btn.size() == QSize(36, 36)
+    assert dock.close_btn.size() == QSize(36, 36)
     assert dock.search.styleSheet() == "" or "white" not in dock.styleSheet()
     assert PAPER in dock.styleSheet()
     assert dock.chrome.layout().itemAt(0).widget() is dock.search
@@ -414,7 +422,8 @@ def test_close_button_hides_dock(qtbot, tmp_path, monkeypatch):
     dock.show()
     assert dock.windowFlags() & Qt.WindowType.FramelessWindowHint
     assert dock.windowFlags() & Qt.WindowType.Tool
-    assert dock.close_btn.text() == "×"
+    assert dock.close_btn.text() == ""
+    assert not dock.close_btn.icon().isNull()
     dock.close_btn.click()
     assert not dock.isVisible()
     assert dock.tray is not None
