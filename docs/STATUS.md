@@ -12,6 +12,7 @@ Git：`main` 应与 `origin/main` 同步（https://github.com/877881029/Tasker �
 - 保持锁定色板、shell/card 圆角、功能、快捷键、数据和公开接口不变
 - Impeccable 视觉北极星：「桌边工作纸」
 - 规格：`docs/superpowers/specs/2026-09-23-toolbar-surface-polish-design.md`
+- 计划：`docs/superpowers/plans/2026-09-23-toolbar-surface-polish.md`
 - 产品与视觉事实：`PRODUCT.md`、`DESIGN.md`
 
 ## 下一步
