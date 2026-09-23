@@ -3,9 +3,10 @@
 **Goal:** Make Tasker's first row feel intentionally designed rather than assembled
 from stock Qt controls, without changing behavior or locked product contracts.
 
-**Architecture:** Keep the existing `QLineEdit` and `QToolButton` objects and signal
-wiring. Refine private geometry, palette, and QSS only. This avoids behavioral
-regression while making every control share one surface language.
+**Architecture:** Keep the public `QLineEdit` contract, existing `QToolButton`
+objects, and signal wiring. A private `SearchLineEdit` painter owns only the search
+surface because the Windows style otherwise forces a native focus underline and
+white base; geometry, palette, accessibility, and behavior remain unchanged.
 
 ## Task 1: Lock the new toolbar contract in tests
 
@@ -43,8 +44,8 @@ regression while making every control share one surface language.
 - Capture the collapsed first row at 150% scaling and compare against the user
   screenshot.
 
-- [ ] Full suite passes
-- [ ] Native screenshot accepted against specification
-- [ ] Frozen package rebuilt and desktop shortcut refreshed
-- [ ] STATUS completed
-- [ ] Final commit and push
+- [x] Full suite passes (`93 passed`, Python 3.12, exit code 0)
+- [x] Native screenshot accepted against specification at 150% DPI
+- [x] Frozen package rebuilt and desktop shortcut refreshed
+- [x] STATUS completed
+- [x] Final commit and push

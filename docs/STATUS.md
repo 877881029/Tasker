@@ -1,23 +1,27 @@
 # Tasker 项目状态（AI 接手必读）
 
-最后更新：2026-09-22  
+最后更新：2026-09-23  
 Git：`main` 应与 `origin/main` 同步（https://github.com/877881029/Tasker ）。
 
 ## 当前目标
 
-**顶部工具栏表面精修**（规格已确认，待实现）
+**顶部工具栏表面精修**（已完成，冻结包已重建并部署）
 
-- 去掉搜索框的系统默认输入框感，改为完整圆角浅纸内嵌面
-- 统一搜索、添加、置顶和隐藏的高度、圆角、边线与交互状态
+- 搜索框改为 38px 高、12px 圆角的 `CARD` 浅纸内嵌面，彻底移除 Windows 原生蓝色底线
+- 搜索聚焦态为完整 2px cobalt 圆角环；圆角外保持 `PAPER`，不再露出系统白色底板
+- 添加、置顶和隐藏统一为 36×36px、10px 圆角，并统一 hover/checked/pressed/focus 状态
+- 搜索、添加、置顶和隐藏全部使用同一笔画语言的 SVG，不再依赖系统字体字符
 - 保持锁定色板、shell/card 圆角、功能、快捷键、数据和公开接口不变
-- Impeccable 视觉北极星：「桌边工作纸」
+- Python 3.12 全量测试 `93 passed`，退出码 0；150% DPI 原生截图验收通过
+- 部署：`%LOCALAPPDATA%\Programs\Tasker\Tasker.exe`；桌面 `Tasker.lnk` 已覆盖
+- 实现提交：`77ba4f5`、`6170ae0`（均已推送至 `origin/main`）
 - 规格：`docs/superpowers/specs/2026-09-23-toolbar-surface-polish-design.md`
 - 计划：`docs/superpowers/plans/2026-09-23-toolbar-surface-polish.md`
 - 产品与视觉事实：`PRODUCT.md`、`DESIGN.md`
 
 ## 下一步
 
-按 TDD 实现顶栏视觉规格，原生截图验证 150% 缩放效果，重建冻结包并刷新桌面快捷方式。
+继续沿「桌边工作纸」北极星审查列表卡片的信息层级和详情页表面一致性；先出规格和原生对照图，再决定下一轮实现，功能与公开合同继续锁定。
 
 ## 上一目标（已完成）
 
