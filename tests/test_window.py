@@ -137,7 +137,11 @@ def test_dock_is_paper_not_white_plates(qtbot, tmp_path, monkeypatch):
     assert dock.close_btn.text() == ""
     assert not dock.close_btn.icon().isNull()
     assert dock.close_btn.toolTip() == "隐藏到托盘"
+    assert not dock.search.hasFrame()
     assert dock.search.height() == 38
+    assert len(dock.search.actions()) == 1
+    assert not dock.search.actions()[0].icon().isNull()
+    assert dock.search.palette().color(QPalette.ColorRole.Base).name() == "#fffaf2"
     assert dock.search.palette().color(QPalette.ColorRole.PlaceholderText).name() == "#8a8176"
     assert dock.add_btn.size() == QSize(36, 36)
     assert dock.pin_btn.size() == QSize(36, 36)

@@ -11,8 +11,10 @@ from PySide6.QtGui import (
     QIcon,
     QKeyEvent,
     QMouseEvent,
+    QPainter,
     QPainterPath,
     QPalette,
+    QPen,
     QRegion,
 )
 from PySide6.QtWidgets import (
@@ -33,9 +35,11 @@ from tasker.resources import resource_path
 from tasker.shell.detail import DetailWindow
 from tasker.store import Item, Store
 from tasker.theme import (
+    CARD,
     COBALT,
     DONE_DOT,
     INK,
+    LINE,
     MUTED,
     PAPER,
     PENDING_DOT,
@@ -142,6 +146,51 @@ def round_window_mask(rect: QRect, radius: int) -> QRegion | None:
     path = QPainterPath()
     path.addRoundedRect(QRectF(rect), float(radius), float(radius))
     return QRegion(path.toFillPolygon().toPolygon())
+
+
+class SearchLineEdit(QLineEdit):
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        palette = self.palette()
+        palette.setColor(QPalette.ColorRole.Base, QColor(CARD))
+        self.setPalette(palette)
+
+    def paintEvent(self, event) -> None:
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(QColor(CARD))
+        painter.drawRoundedRect(
+            QRectF(self.rect()).adjusted(0.5, 0.5, -0.5, -0.5), 12, 12
+        )
+        painter.end()
+        super().paintEvent(event)
+        if self.hasFocus():
+            color, width = COBALT, 2.0
+        elif self.underMouse():
+            color, width = MUTED, 1.0
+        else:
+            color, width = LINE, 1.0
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        surface_rect = QRectF(self.rect()).adjusted(0.5, 0.5, -0.5, -0.5)
+        painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_Multiply)
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(QColor(CARD))
+        painter.drawRoundedRect(surface_rect, 12, 12)
+        painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceOver)
+        corners = QPainterPath()
+        corners.setFillRule(Qt.FillRule.OddEvenFill)
+        corners.addRect(QRectF(self.rect()))
+        corners.addRoundedRect(surface_rect, 12, 12)
+        painter.fillPath(corners, QColor(PAPER))
+        painter.setBrush(Qt.BrushStyle.NoBrush)
+        painter.setPen(QPen(QColor(color), width))
+        inset = width / 2
+        painter.drawRoundedRect(
+            QRectF(self.rect()).adjusted(inset, inset, -inset, -inset), 12, 12
+        )
 
 
 def hit_test_local(size: QSize, local: QPoint, margin: int = FRAME_MARGIN) -> int:
@@ -306,11 +355,17 @@ class DockWindow(QWidget):
         header = QHBoxLayout(self.chrome)
         header.setContentsMargins(14, 12, 14, 8)
         header.setSpacing(8)
-        self.search = QLineEdit()
+        self.search = SearchLineEdit()
         self.search.setObjectName("search")
+        self.search.setFrame(False)
         self.search.setPlaceholderText("查找…")
         self.search.setAccessibleName("搜索事项")
         self.search.setFixedHeight(38)
+        search_icon = resource_path("assets", "icons", "search.svg")
+        if search_icon.exists():
+            self.search.addAction(
+                QIcon(str(search_icon)), QLineEdit.ActionPosition.LeadingPosition
+            )
         search_palette = self.search.palette()
         search_palette.setColor(QPalette.ColorRole.PlaceholderText, QColor(MUTED))
         self.search.setPalette(search_palette)
