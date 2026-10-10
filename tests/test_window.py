@@ -21,8 +21,9 @@ from tasker.shell.window import (
     geometry_for_screen,
     hit_test_local,
     paper_action,
+    fit_into,
     paper_corner_radius,
-    round_window_mask,
+    split_rail_width,
 )
 from tasker.store import Store
 from tasker.theme import CHROME, DONE_DOT, HOVER, LINE, PAPER, SELECTED, dock_style
@@ -46,22 +47,48 @@ def test_expand_from_dock_grows_left_by_extra():
     assert geo.height() == collapsed.height()
 
 
-def test_expand_from_dock_clamps_to_screen_left():
+def test_expand_from_dock_shifts_right_when_left_room_is_short():
     avail = QRect(0, 0, 1920, 1080)
     collapsed = QRect(300, 80, 400, 700)
     geo = expand_from_dock(collapsed, 800, avail)
-    assert geo == QRect(0, 80, 700, 700)
+    assert geo == QRect(0, 80, 1200, 700)
 
 
-def test_expand_from_dock_zero_extra_when_on_left_edge():
+def test_expand_from_dock_on_left_edge_still_opens_detail():
     avail = QRect(0, 0, 1920, 1080)
     collapsed = QRect(0, 20, 400, 600)
     geo = expand_from_dock(collapsed, 800, avail)
-    assert geo == collapsed
+    assert geo == QRect(0, 20, 1200, 600)
+
+
+def test_expand_from_dock_keeps_minimum_detail_and_stays_on_screen():
+    avail = QRect(1920, 0, 1280, 1000)
+    collapsed = QRect(2600, 900, 400, 600)
+    geo = expand_from_dock(collapsed, 100, avail)
+    assert geo.width() == 400 + 360
+    assert avail.contains(geo)
+    narrow = expand_from_dock(QRect(0, 0, 400, 500), 2000, QRect(0, 0, 900, 600))
+    assert narrow == QRect(0, 0, 900, 500)
 
 
 def test_default_extra_width_is_twice_rail():
     assert default_extra_width(QRect(100, 0, 400, 800)) == 800
+    assert default_extra_width(QRect(100, 0, 120, 800)) == 360
+
+
+def test_fit_into_pulls_window_back_on_screen():
+    avail = QRect(0, 40, 1600, 860)
+    assert fit_into(QRect(100, 100, 400, 500), avail) == QRect(100, 100, 400, 500)
+    assert fit_into(QRect(2500, 100, 400, 500), avail) == QRect(1200, 100, 400, 500)
+    assert fit_into(QRect(-900, -50, 400, 500), avail) == QRect(0, 40, 400, 500)
+    assert fit_into(QRect(10, 10, 2400, 1200), avail) == avail
+
+
+def test_split_rail_width_respects_both_minimums():
+    assert split_rail_width(1200, 400) == 400
+    assert split_rail_width(1200, 100) == 280
+    assert split_rail_width(1200, 1100) == 1200 - 7 - 360
+    assert split_rail_width(500, 400) == 280
 
 
 def test_add_search_done_and_color(qtbot, tmp_path, monkeypatch):
@@ -410,8 +437,10 @@ def test_closing_detail_keeps_moved_dock_position(qtbot, tmp_path, monkeypatch):
     dock = DockWindow(store)
     qtbot.addWidget(dock)
     dock.show()
+    dock.resize(400, dock.height() - 96)
+    qtbot.wait(20)
     collapsed = dock.width()
-    parked = dock.pos() + QPoint(64, 48)
+    parked = dock.pos() + QPoint(-64, 48)
     dock.move(parked)
     qtbot.wait(20)
     dock.open_detail(item.id)
@@ -470,20 +499,10 @@ def test_paper_action_move_resize_or_ignore():
     assert paper_action(QPoint(200, 150), size, "search") == "ignore"
     assert paper_action(QPoint(200, 150), size, "itemCard") == "ignore"
     assert paper_action(QPoint(200, 150), size, "journalDocument") == "ignore"
-
-
-def test_round_window_mask_clips_corners_on_full_rect():
-    rect = QRect(0, 0, 400, 300)
-    assert round_window_mask(rect, 0) is None
-    region = round_window_mask(rect, 16)
-    assert region is not None
-    inner = rect.adjusted(1, 1, -1, -1)
-    assert region.boundingRect().contains(inner)
-    assert not region.contains(QPoint(0, 0))
-    assert not region.contains(QPoint(399, 0))
-    assert not region.contains(QPoint(0, 299))
-    assert not region.contains(QPoint(399, 299))
-    assert region.contains(QPoint(200, 150))
+    assert paper_action(QPoint(200, 150), size, "detail") == "move"
+    assert paper_action(QPoint(200, 150), size, "detailFooter") == "move"
+    assert paper_action(QPoint(200, 150), size, "detailTitle") == "ignore"
+    assert paper_action(QPoint(200, 150), size, "notch") == "split"
 
 
 def test_paper_corner_radius_is_zero_when_flush_to_work_area():
@@ -552,8 +571,9 @@ def test_open_detail_keeps_cards_and_marks_selection(qtbot, tmp_path, monkeypatc
     assert dock.cards() == before
     selected = [card.item_id for card in dock.cards() if card.is_selected()]
     assert selected == [second.id]
-    assert dock.notch.width() == 1
-    assert LINE in dock.notch.styleSheet()
+    assert dock.notch.width() == 7
+    assert dock.notch.line_color == LINE
+    assert dock.notch.cursor().shape() == Qt.CursorShape.SplitHCursor
 
 
 def test_card_status_menu_changes_state_and_syncs_detail(qtbot, tmp_path, monkeypatch):
@@ -595,3 +615,128 @@ def test_pin_icon_is_a_pushpin_that_fills_when_pinned(qtbot, tmp_path):
     assert INK.lower() in (root / "pin.svg").read_text(encoding="utf-8").lower()
     on_svg = (root / "pin-on.svg").read_text(encoding="utf-8").lower()
     assert COBALT.lower() in on_svg and 'fill="none"' not in on_svg.split("<path")[0]
+
+
+def _dock_with_item(qtbot, tmp_path, monkeypatch, title="窗口"):
+    monkeypatch.setenv("TASKER_DATA_DIR", str(tmp_path))
+    from tasker.shell.window import DockWindow
+
+    store = Store(tmp_path / "tasker.sqlite")
+    item = store.save(replace(store.create(), title=title))
+    dock = DockWindow(store)
+    qtbot.addWidget(dock)
+    dock.show()
+    return dock, item
+
+
+def test_open_detail_on_left_edge_keeps_detail_usable(qtbot, tmp_path, monkeypatch):
+    dock, item = _dock_with_item(qtbot, tmp_path, monkeypatch)
+    avail = dock.work_area()
+    parked = QRect(avail.x(), avail.y() + 40, 400, 600)
+    dock.setGeometry(parked)
+    qtbot.wait(20)
+    parked = QRect(dock.geometry())
+    dock.open_detail(item.id)
+    qtbot.wait(20)
+    assert avail.contains(dock.geometry())
+    assert dock.detail_host.width() >= 360
+    assert dock.minimumWidth() >= dock.rail.width() + 360
+    dock._detail.close_detail()
+    qtbot.wait(20)
+    assert dock.geometry() == parked
+
+
+def test_fit_to_screen_recovers_offscreen_window(qtbot, tmp_path, monkeypatch):
+    dock, _item = _dock_with_item(qtbot, tmp_path, monkeypatch)
+    avail = dock.work_area()
+    dock.setGeometry(QRect(avail.right() + 600, avail.y(), 400, 500))
+    dock._fit_to_screen()
+    qtbot.wait(20)
+    assert avail.intersects(dock.geometry())
+    assert avail.contains(dock.geometry())
+
+
+def test_toggle_fill_maximizes_and_restores(qtbot, tmp_path, monkeypatch):
+    from PySide6.QtCore import QPointF
+    from PySide6.QtGui import QMouseEvent
+    from PySide6.QtWidgets import QApplication
+
+    dock, _item = _dock_with_item(qtbot, tmp_path, monkeypatch)
+    avail = dock.work_area()
+    start = QRect(avail.x() + 100, avail.y() + 60, 400, 500)
+    dock.setGeometry(start)
+    qtbot.wait(20)
+    start = QRect(dock.geometry())
+    dock.toggle_fill()
+    qtbot.wait(20)
+    assert dock.geometry() == avail
+    assert dock.corner_overlay.radius() == 0
+    pos = QPointF(dock.chrome.width() - 6, dock.chrome.height() / 2)
+    dbl = QMouseEvent(
+        QEvent.Type.MouseButtonDblClick,
+        pos,
+        QPointF(dock.chrome.mapToGlobal(pos.toPoint())),
+        Qt.MouseButton.LeftButton,
+        Qt.MouseButton.LeftButton,
+        Qt.KeyboardModifier.NoModifier,
+    )
+    QApplication.sendEvent(dock.chrome, dbl)
+    qtbot.wait(20)
+    assert dock.geometry() == start
+    assert dock.corner_overlay.radius() == 10
+
+
+def test_corner_overlay_replaces_window_mask(qtbot, tmp_path, monkeypatch):
+    dock, _item = _dock_with_item(qtbot, tmp_path, monkeypatch)
+    overlay = dock.corner_overlay
+    assert overlay.objectName() == "cornerOverlay"
+    assert overlay.testAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+    assert overlay.geometry() == dock.rect()
+    assert dock.mask().isEmpty()
+
+
+def test_rail_width_drag_changes_split_and_is_remembered(qtbot, tmp_path, monkeypatch):
+    dock, item = _dock_with_item(qtbot, tmp_path, monkeypatch)
+    avail = dock.work_area()
+    dock.setGeometry(QRect(avail.right() - 420, avail.y() + 40, 420, 600))
+    qtbot.wait(20)
+    dock.open_detail(item.id)
+    qtbot.wait(20)
+    total = dock.width()
+    dock.set_rail_width(320)
+    qtbot.wait(20)
+    assert dock.rail.width() == 320
+    assert dock.width() == total
+    dock._detail.close_detail()
+    qtbot.wait(20)
+    assert dock.width() == 320
+
+
+def test_stylesheets_parse_cleanly(qtbot, tmp_path, monkeypatch):
+    import re
+
+    from PySide6.QtCore import qInstallMessageHandler
+
+    from tasker.shell.journal_edit import journal_document_html
+
+    style = re.search(r"<style>(.*?)</style>", journal_document_html([], writable=True), re.S)
+    assert style is not None
+    depth = 0
+    for char in style.group(1):
+        depth += {"{": 1, "}": -1}.get(char, 0)
+        assert depth >= 0
+    assert depth == 0
+
+    messages: list[str] = []
+    previous = qInstallMessageHandler(lambda _kind, _ctx, text: messages.append(text))
+    try:
+        dock, item = _dock_with_item(qtbot, tmp_path, monkeypatch)
+        dock.open_detail(item.id)
+        detail = dock._detail
+        detail.delete_item()
+        for widget in (dock, detail, detail.status_btn, detail.delete_btn):
+            widget.ensurePolished()
+        qtbot.wait(20)
+    finally:
+        qInstallMessageHandler(previous)
+    assert not [m for m in messages if "Could not parse stylesheet" in m]

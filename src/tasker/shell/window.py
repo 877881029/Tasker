@@ -4,7 +4,7 @@ import ctypes
 import os
 from ctypes import wintypes
 
-from PySide6.QtCore import QEvent, QPoint, QRect, QRectF, QSize, Qt
+from PySide6.QtCore import QDateTime, QEvent, QPoint, QRect, QRectF, QSize, Qt
 from PySide6.QtGui import (
     QColor,
     QGuiApplication,
@@ -15,7 +15,6 @@ from PySide6.QtGui import (
     QPainterPath,
     QPalette,
     QPen,
-    QRegion,
 )
 from PySide6.QtWidgets import (
     QApplication,
@@ -44,6 +43,7 @@ from tasker.theme import (
     LINE,
     LINE_STRONG,
     MUTED,
+    PAPER,
     SHELL_RADIUS,
     STATE_DOT,
     STATE_LABEL,
@@ -59,20 +59,51 @@ def geometry_for_screen(avail: QRect) -> QRect:
     return QRect(x, avail.y(), width, avail.height())
 
 
+MIN_DETAIL_WIDTH = 360
+MIN_RAIL_WIDTH = 280
+NOTCH_WIDTH = 7
+
+
 def default_extra_width(collapsed: QRect) -> int:
-    return max(0, collapsed.width() * 2)
+    return max(MIN_DETAIL_WIDTH, collapsed.width() * 2)
 
 
-def expand_from_dock(collapsed: QRect, extra_width: int, avail: QRect) -> QRect:
-    extra = max(int(extra_width), 0)
-    room = collapsed.x() - avail.x()
-    extra = min(extra, max(room, 0))
-    return QRect(
-        collapsed.x() - extra,
-        collapsed.y(),
-        collapsed.width() + extra,
-        collapsed.height(),
-    )
+def _clamp(value: int, low: int, high: int) -> int:
+    return max(low, min(value, high))
+
+
+def fit_into(geo: QRect, avail: QRect) -> QRect:
+    width = min(geo.width(), avail.width())
+    height = min(geo.height(), avail.height())
+    x = _clamp(geo.x(), avail.x(), avail.x() + avail.width() - width)
+    y = _clamp(geo.y(), avail.y(), avail.y() + avail.height() - height)
+    return QRect(x, y, width, height)
+
+
+def expand_from_dock(
+    collapsed: QRect,
+    extra_width: int,
+    avail: QRect,
+    min_detail: int = MIN_DETAIL_WIDTH,
+) -> QRect:
+    extra = max(int(extra_width), min_detail)
+    total = min(collapsed.width() + extra, avail.width())
+    right = collapsed.x() + collapsed.width()
+    x = _clamp(right - total, avail.x(), avail.x() + avail.width() - total)
+    height = min(collapsed.height(), avail.height())
+    y = _clamp(collapsed.y(), avail.y(), avail.y() + avail.height() - height)
+    return QRect(x, y, total, height)
+
+
+def split_rail_width(
+    total: int,
+    desired: int,
+    min_rail: int = MIN_RAIL_WIDTH,
+    notch: int = NOTCH_WIDTH,
+    min_detail: int = MIN_DETAIL_WIDTH,
+) -> int:
+    upper = max(min_rail, total - notch - min_detail)
+    return _clamp(int(desired), min_rail, upper)
 
 
 FRAME_MARGIN = 8
@@ -88,8 +119,19 @@ HTBOTTOMRIGHT = 17
 WM_NCHITTEST = 0x0084
 WM_NCCALCSIZE = 0x0083
 MOVE_NAMES = frozenset(
-    {"shell", "dock", "chrome", "listHost", "listScroll", "detailHost", "notch"}
+    {
+        "shell",
+        "dock",
+        "chrome",
+        "rail",
+        "listHost",
+        "listScroll",
+        "detailHost",
+        "detail",
+        "detailFooter",
+    }
 )
+SPLIT_NAMES = frozenset({"notch"})
 IGNORE_NAMES = frozenset(
     {
         "search",
@@ -130,6 +172,8 @@ def paper_action(
     name = object_name or ""
     if name in IGNORE_NAMES:
         return "ignore"
+    if name in SPLIT_NAMES:
+        return "split"
     if name in MOVE_NAMES:
         return "move"
     return "ignore"
@@ -146,12 +190,99 @@ def paper_corner_radius(geo: QRect, avail: QRect, slack: int = 2) -> int:
     return SHELL_RADIUS
 
 
-def round_window_mask(rect: QRect, radius: int) -> QRegion | None:
-    if radius <= 0:
-        return None
-    path = QPainterPath()
-    path.addRoundedRect(QRectF(rect), float(radius), float(radius))
-    return QRegion(path.toFillPolygon().toPolygon())
+class CornerOverlay(QWidget):
+    """Antialiased rounded window corners drawn over every child."""
+
+    def __init__(self, parent: QWidget) -> None:
+        super().__init__(parent)
+        self.setObjectName("cornerOverlay")
+        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
+        self.setAttribute(Qt.WidgetAttribute.WA_NoSystemBackground, True)
+        self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self._radius = SHELL_RADIUS
+
+    def radius(self) -> int:
+        return self._radius
+
+    def set_radius(self, radius: int) -> None:
+        if radius != self._radius:
+            self._radius = radius
+            self.update()
+
+    def paintEvent(self, event) -> None:
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        frame = QRectF(self.rect())
+        inner = frame.adjusted(0.5, 0.5, -0.5, -0.5)
+        if self._radius > 0:
+            outside = QPainterPath()
+            outside.setFillRule(Qt.FillRule.OddEvenFill)
+            outside.addRect(frame)
+            outside.addRoundedRect(frame, self._radius, self._radius)
+            painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_Clear)
+            painter.fillPath(outside, Qt.GlobalColor.transparent)
+            painter.setCompositionMode(
+                QPainter.CompositionMode.CompositionMode_SourceOver
+            )
+        painter.setBrush(Qt.BrushStyle.NoBrush)
+        painter.setPen(QPen(QColor(LINE), 1.0))
+        radius = max(self._radius - 0.5, 0.0)
+        painter.drawRoundedRect(inner, radius, radius)
+        painter.end()
+
+
+class SplitHandle(QWidget):
+    """Draggable divider between the detail paper and the rail."""
+
+    def __init__(self, host: "DockWindow") -> None:
+        super().__init__()
+        self._host = host
+        self._grab: int | None = None
+        self.line_color = LINE
+        self.setObjectName("notch")
+        self.setFixedWidth(NOTCH_WIDTH)
+        self.setCursor(Qt.CursorShape.SplitHCursor)
+        self.setToolTip("拖动调整宽度")
+
+    def paintEvent(self, event) -> None:
+        painter = QPainter(self)
+        middle = self.width() // 2
+        painter.fillRect(0, 0, middle, self.height(), QColor(PAPER))
+        painter.fillRect(middle + 1, 0, self.width() - middle - 1, self.height(), QColor(CHROME))
+        color = QColor(COBALT if self._grab is not None or self.underMouse() else self.line_color)
+        painter.fillRect(middle, 0, 1, self.height(), color)
+        painter.end()
+
+    def enterEvent(self, event) -> None:
+        self.update()
+        super().enterEvent(event)
+
+    def leaveEvent(self, event) -> None:
+        self.update()
+        super().leaveEvent(event)
+
+    def mousePressEvent(self, event: QMouseEvent) -> None:
+        if event.button() == Qt.MouseButton.LeftButton:
+            self._grab = int(event.globalPosition().x()) + self._host.rail.width()
+            self.update()
+            event.accept()
+            return
+        super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event: QMouseEvent) -> None:
+        if self._grab is not None and event.buttons() & Qt.MouseButton.LeftButton:
+            self._host.set_rail_width(self._grab - int(event.globalPosition().x()))
+            event.accept()
+            return
+        super().mouseMoveEvent(event)
+
+    def mouseReleaseEvent(self, event: QMouseEvent) -> None:
+        if self._grab is not None:
+            self._grab = None
+            self.update()
+            event.accept()
+            return
+        super().mouseReleaseEvent(event)
 
 
 class SearchLineEdit(QLineEdit):
@@ -391,6 +522,12 @@ class DockWindow(QWidget):
         self._open_item_id: str | None = None
         self._collapsed_geo: QRect | None = None
         self._extra_width: int | None = None
+        self._placed_geo: QRect | None = None
+        self._restore_geo: QRect | None = None
+        self._watched_screens: set[int] = set()
+        self._last_press: tuple[int, QPoint] | None = None
+        self._last_fill = 0
+        self._placing = 0
         self._active_draft_id: str | None = None
         self.setWindowTitle("Tasker")
         self.setObjectName("dock")
@@ -403,6 +540,7 @@ class DockWindow(QWidget):
         self.setFont(ui_font(13))
         self.setStyleSheet(dock_style())
         self.chrome = ChromeBar(self)
+        self.chrome.setObjectName("chrome")
         header = QHBoxLayout(self.chrome)
         header.setContentsMargins(12, 10, 10, 8)
         header.setSpacing(4)
@@ -516,11 +654,7 @@ class DockWindow(QWidget):
         self.detail_host.hide()
         self.detail_host.setMaximumWidth(0)
 
-        self.notch = QWidget()
-        self.notch.setObjectName("notch")
-        self.notch.setFixedWidth(1)
-        self.notch.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
-        self.notch.setStyleSheet(f"background:{LINE};")
+        self.notch = SplitHandle(self)
         self.notch.hide()
 
         columns = QHBoxLayout()
@@ -531,12 +665,16 @@ class DockWindow(QWidget):
         columns.addWidget(self.rail, 0)
         shell_layout.addLayout(columns, 1)
         root.addWidget(self.shell)
+        self.corner_overlay = CornerOverlay(self)
+        self.corner_overlay.setGeometry(self.rect())
+        self.corner_overlay.raise_()
         self._store.collapse_blank_drafts()
         self._place(initial=True)
         self.refresh()
         self._icon_path = resource_path("assets", "icons", "tasker.ico")
         self._setup_tray()
         self._arm_frame()
+        self._watch_screens()
 
     def _frame_flags(self, pinned: bool) -> Qt.WindowType:
         flags = Qt.WindowType.Tool | Qt.WindowType.FramelessWindowHint
@@ -579,21 +717,94 @@ class DockWindow(QWidget):
 
     def showEvent(self, event) -> None:
         super().showEvent(event)
-        self._apply_round_mask()
+        self._watch_screens()
+        self._update_corners()
 
     def resizeEvent(self, event) -> None:
         super().resizeEvent(event)
-        self._apply_round_mask()
+        self.corner_overlay.setGeometry(self.rect())
+        self.corner_overlay.raise_()
+        self._update_corners()
         self._capture_expanded_layout()
 
     def moveEvent(self, event) -> None:
         super().moveEvent(event)
+        self._update_corners()
         self._capture_expanded_layout()
 
-    def _capture_expanded_layout(self) -> None:
+    def _screen(self):
+        center = self.frameGeometry().center()
+        screen = QGuiApplication.screenAt(center)
+        if screen is None:
+            screen = self.screen()
+        if screen is None:
+            screen = QGuiApplication.primaryScreen()
+        return screen
+
+    def work_area(self) -> QRect:
+        screen = self._screen()
+        return screen.availableGeometry() if screen else QRect(0, 0, 1920, 1080)
+
+    def _watch_screens(self) -> None:
+        app = QGuiApplication.instance()
+        if app is None:
+            return
+        if not self._watched_screens:
+            app.screenAdded.connect(self._on_screen_added)
+            app.screenRemoved.connect(self._on_screens_changed)
+            self._watched_screens.add(0)
+        for screen in QGuiApplication.screens():
+            self._on_screen_added(screen, fit=False)
+        handle = self.windowHandle()
+        if handle is not None and id(handle) not in self._watched_screens:
+            handle.screenChanged.connect(self._on_screens_changed)
+            self._watched_screens.add(id(handle))
+
+    def _on_screen_added(self, screen, fit: bool = True) -> None:
+        key = id(screen)
+        if key not in self._watched_screens:
+            screen.availableGeometryChanged.connect(self._on_screens_changed)
+            self._watched_screens.add(key)
+        if fit:
+            self._on_screens_changed()
+
+    def _on_screens_changed(self, *_args) -> None:
+        if self.isVisible():
+            self._fit_to_screen()
+
+    def _fit_to_screen(self) -> None:
+        avail = self.work_area()
+        if self._restore_geo is not None:
+            self._set_geometry(avail)
+            return
+        target = fit_into(QRect(self.geometry()), avail)
+        if target != self.geometry():
+            self._set_geometry(target)
+            self._capture_expanded_layout(force=True)
+        if self._collapsed_geo is not None:
+            self._collapsed_geo = fit_into(self._collapsed_geo, avail)
+
+    def _set_geometry(self, geo: QRect) -> None:
+        self._placed_geo = QRect(geo)
+        self._placing += 1
+        try:
+            self.setGeometry(geo)
+        finally:
+            self._placing -= 1
+        self._placed_geo = QRect(self.geometry())
+
+    def _capture_expanded_layout(self, force: bool = False) -> None:
         if not self.detail_host.isVisible():
             return
-        rail_w = self.rail.width()
+        if not force:
+            if self._placing:
+                return
+            if self._placed_geo is not None and self.geometry() == self._placed_geo:
+                return
+            if self._restore_geo is not None:
+                return
+        # The rail is fixed-width while the detail is open; its laid-out width can lag.
+        rail_w = self.rail.minimumWidth() or self.rail.width()
         if rail_w <= 0:
             return
         self._extra_width = max(0, self.width() - rail_w)
@@ -604,18 +815,50 @@ class DockWindow(QWidget):
             self.height(),
         )
 
-    def _apply_round_mask(self) -> None:
-        screen = QGuiApplication.primaryScreen()
-        avail = screen.availableGeometry() if screen else QRect(self.geometry())
-        radius = paper_corner_radius(self.geometry(), avail)
-        self.shell.setProperty("flush", "true" if radius == 0 else "false")
-        self.shell.style().unpolish(self.shell)
-        self.shell.style().polish(self.shell)
-        region = round_window_mask(self.rect(), radius)
-        if region is None:
-            self.clearMask()
+    def _update_corners(self) -> None:
+        radius = paper_corner_radius(self.geometry(), self.work_area())
+        flush = "true" if radius == 0 else "false"
+        if self.shell.property("flush") != flush:
+            self.shell.setProperty("flush", flush)
+            self.shell.style().unpolish(self.shell)
+            self.shell.style().polish(self.shell)
+        self.corner_overlay.set_radius(radius)
+
+    def toggle_fill(self) -> None:
+        if self._restore_geo is not None:
+            restore = self._restore_geo
+            self._restore_geo = None
+            self._set_geometry(fit_into(restore, self.work_area()))
+            return
+        self._restore_geo = QRect(self.geometry())
+        self._set_geometry(self.work_area())
+
+    def set_rail_width(self, width: int) -> None:
+        if not self.detail_host.isVisible():
+            return
+        rail_w = split_rail_width(self.width(), width)
+        if rail_w == self.rail.width():
+            return
+        self._placing += 1
+        try:
+            self.rail.setFixedWidth(rail_w)
+            self._update_minimum_width()
+            layout = self.shell.layout()
+            if layout is not None:
+                layout.activate()
+        finally:
+            self._placing -= 1
+        self._extra_width = max(0, self.width() - rail_w)
+        self._collapsed_geo = QRect(
+            self.x() + self.width() - rail_w, self.y(), rail_w, self.height()
+        )
+
+    def _update_minimum_width(self) -> None:
+        if self.detail_host.isVisible():
+            wanted = self.rail.minimumWidth() + NOTCH_WIDTH + MIN_DETAIL_WIDTH + 2
+            self.setMinimumWidth(min(wanted, self.work_area().width()))
         else:
-            self.setMask(region)
+            self.setMinimumWidth(320)
 
     def nativeEvent(self, eventType, message):  # noqa: N802
         if os.name == "nt" and eventType in (b"windows_generic_MSG", "windows_generic_MSG"):
@@ -640,12 +883,49 @@ class DockWindow(QWidget):
     def eventFilter(self, watched, event) -> bool:
         if (
             isinstance(event, QMouseEvent)
-            and event.type() == QEvent.Type.MouseButtonPress
             and event.button() == Qt.MouseButton.LeftButton
-            and self._begin_frame_interaction(event)
         ):
-            return True
+            kind = event.type()
+            if kind == QEvent.Type.MouseButtonPress and self._is_second_click(event):
+                self._fill_from_gesture()
+                return True
+            if kind == QEvent.Type.MouseButtonPress and self._begin_frame_interaction(event):
+                return True
+            if kind == QEvent.Type.MouseButtonDblClick and self._is_move_zone(event):
+                self._fill_from_gesture()
+                return True
         return super().eventFilter(watched, event)
+
+    def _is_second_click(self, event: QMouseEvent) -> bool:
+        if not self._is_move_zone(event):
+            self._last_press = None
+            return False
+        now = int(event.timestamp())
+        point = event.globalPosition().toPoint()
+        last = self._last_press
+        if last is not None and last[0] == now and last[1] == point:
+            return False
+        self._last_press = (now, point)
+        if last is None:
+            return False
+        interval = QApplication.doubleClickInterval()
+        near = (point - last[1]).manhattanLength() <= QApplication.startDragDistance()
+        if now - last[0] <= interval and near:
+            self._last_press = None
+            return True
+        return False
+
+    def _fill_from_gesture(self) -> None:
+        now = QDateTime.currentMSecsSinceEpoch()
+        if now - self._last_fill < QApplication.doubleClickInterval():
+            return
+        self._last_fill = now
+        self.toggle_fill()
+
+    def _is_move_zone(self, event: QMouseEvent) -> bool:
+        local = self.mapFromGlobal(event.globalPosition().toPoint())
+        name = self._named_widget_at(local)
+        return paper_action(local, self.size(), name, margin=-1) == "move"
 
     def _named_widget_at(self, local: QPoint) -> str:
         widget = self.childAt(local)
@@ -670,8 +950,7 @@ class DockWindow(QWidget):
         return False
 
     def _place(self, *, initial: bool = False) -> None:
-        screen = QGuiApplication.primaryScreen()
-        avail = screen.availableGeometry() if screen else QRect(0, 0, 1920, 1080)
+        avail = self.work_area()
         if self.detail_host.isVisible():
             collapsed = self._collapsed_geo or QRect(self.geometry())
             extra = (
@@ -679,20 +958,26 @@ class DockWindow(QWidget):
                 if self._extra_width is not None
                 else default_extra_width(collapsed)
             )
-            self.rail.setFixedWidth(collapsed.width())
-            self.setGeometry(expand_from_dock(collapsed, extra, avail))
+            target = expand_from_dock(collapsed, extra, avail)
+            self._placing += 1
+            try:
+                self.rail.setFixedWidth(split_rail_width(target.width(), collapsed.width()))
+                self._update_minimum_width()
+            finally:
+                self._placing -= 1
+            self._set_geometry(target)
             return
         self.rail.setMinimumWidth(0)
         self.rail.setMaximumWidth(16777215)
         self.setMinimumSize(320, 200)
         self.setMaximumWidth(16777215)
         if self._collapsed_geo is not None:
-            self.setGeometry(self._collapsed_geo)
+            self._set_geometry(fit_into(self._collapsed_geo, avail))
             self._collapsed_geo = None
             return
         if initial or self.width() < 2:
             target = geometry_for_screen(avail)
-            self.setGeometry(target)
+            self._set_geometry(target)
             self.resize(target.size())
 
     def _toggle_pin(self, pinned: bool) -> None:
@@ -776,7 +1061,11 @@ class DockWindow(QWidget):
         if item is None:
             return
         if not self.detail_host.isVisible():
-            self._collapsed_geo = QRect(self.geometry())
+            if self._restore_geo is not None:
+                self._collapsed_geo = QRect(self._restore_geo)
+                self._restore_geo = None
+            else:
+                self._collapsed_geo = QRect(self.geometry())
         self._open_item_id = item_id
         if self._detail is None:
             self._detail = DetailWindow(self._store, parent=self.detail_host)
@@ -798,6 +1087,7 @@ class DockWindow(QWidget):
 
     def _on_detail_closed(self) -> None:
         self._open_item_id = None
+        self._restore_geo = None
         self.detail_host.hide()
         self.notch.hide()
         self.detail_host.setMaximumWidth(0)

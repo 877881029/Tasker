@@ -127,10 +127,10 @@ def journal_document_html(
         "column-gap:12px;row-gap:1.15em;align-items:start}"
         f".stamp{{text-align:right;color:{MUTED};font-size:12px;font-weight:600;"
         "line-height:24.75px;padding-top:1px;white-space:nowrap;-webkit-user-select:none;"
-        "user-select:none}}"
+        "user-select:none}"
         f".stamp.newest{{color:{COBALT}}}"
         f".txt{{color:{INK};font-size:15px;line-height:1.65;min-width:0;"
-        "overflow-wrap:anywhere}}"
+        "overflow-wrap:anywhere}"
         f".txt[contenteditable]{{outline:none;caret-color:{COBALT};min-height:1.65em}}"
     )
     script = ""

@@ -328,7 +328,7 @@ class DetailWindow(QWidget):
             self.delete_btn.setStyleSheet(
                 f"QToolButton#deleteBtn{{background:{URGENT_BG};color:{URGENT_DOT};"
                 f"border:1px solid {URGENT_LINE};border-radius:16px;"
-                "padding:0 14px;font-size:13px;font-weight:600;}}"
+                "padding:0 14px;font-size:13px;font-weight:600;}"
                 f"QToolButton#deleteBtn:hover{{border:1px solid {URGENT_DOT};}}"
                 f"QToolButton#deleteBtn:focus{{border:2px solid {COBALT};}}"
             )
@@ -372,7 +372,7 @@ class DetailWindow(QWidget):
         self.status_btn.setStyleSheet(
             f"QToolButton#statusPill{{background:{bg};color:{INK};"
             f"border:1px solid {line};border-radius:13px;padding:0 10px 0 8px;"
-            "font-size:12px;font-weight:600;}}"
+            "font-size:12px;font-weight:600;}"
             f"QToolButton#statusPill:hover{{border:1px solid {dot};}}"
             f"QToolButton#statusPill:focus{{border:2px solid {COBALT};}}"
             "QToolButton#statusPill::menu-indicator{image:none;width:0;}"
