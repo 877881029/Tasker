@@ -436,7 +436,12 @@ class DockWindow(QWidget):
         self.pin_btn.setText("")
         pin_icon = resource_path("assets", "icons", "pin.svg")
         if pin_icon.exists():
-            self.pin_btn.setIcon(QIcon(str(pin_icon)))
+            icon = QIcon(str(pin_icon))
+            pinned_icon = resource_path("assets", "icons", "pin-on.svg")
+            if pinned_icon.exists():
+                icon.addFile(str(pinned_icon), QSize(), QIcon.Mode.Normal, QIcon.State.On)
+                icon.addFile(str(pinned_icon), QSize(), QIcon.Mode.Active, QIcon.State.On)
+            self.pin_btn.setIcon(icon)
             self.pin_btn.setIconSize(QSize(16, 16))
         self.pin_btn.setFixedSize(32, 32)
         self.pin_btn.setToolTip("钉在其它窗口上面")

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+
 from html import escape
 
 from PySide6.QtCore import QEventLoop, QRect, QSize, Qt, QTimer, QUrl
@@ -96,7 +98,7 @@ def parse_write_state(payload: object) -> tuple[bool, list[tuple[str, str]]] | N
     return dirty, found
 
 
-def journal_document_html(
+def journal_log_markup(
     entries: list[tuple[str, str]], *, writable: bool = False
 ) -> str:
     cells: list[str] = []
@@ -112,6 +114,12 @@ def journal_document_html(
             f'<div class="stamp{klass}">{escape(stamp)}</div>'
             f'<div class="txt"{edit}>{body}</div>'
         )
+    return f'<div class="log">{"".join(cells)}</div>'
+
+
+def journal_document_html(
+    entries: list[tuple[str, str]], *, writable: bool = False
+) -> str:
     extra = (
         "body{padding:12px 20px 32px 4px;font-size:15px;line-height:1.65;"
         f"font-family:{UI_FONT}}}"
@@ -129,7 +137,7 @@ def journal_document_html(
     if writable:
         script = f"<script>{_WRITE_BOOTSTRAP_JS}</script>"
     return wrap_document_html(
-        f'<div class="log">{"".join(cells)}</div>{script}', extra_css=extra
+        f"{journal_log_markup(entries, writable=writable)}{script}", extra_css=extra
     )
 
 
@@ -154,6 +162,7 @@ class JournalDocumentView(QWebEngineView):
         self._writable = False
         self._pending_focus = False
         self._ready = False
+        self._pending_log: str | None = None
         self._live_rows: list[tuple[str, str]] | None = None
         self._poll = QTimer(self)
         self._poll.setInterval(120)
@@ -165,11 +174,31 @@ class JournalDocumentView(QWebEngineView):
     ) -> None:
         self._poll.stop()
         self._live_rows = None
+        reuse = self._html and not writable and not self._writable
         self._writable = writable
         self._pending_focus = writable
-        self._ready = False
         self._html = journal_document_html(entries, writable=writable)
+        if reuse:
+            # Swap content in place: re-navigating flashes a see-through frame
+            # inside the translucent dock while Chromium rebuilds its surface.
+            self._pending_log = journal_log_markup(entries)
+            if self._ready:
+                self._apply_pending_log()
+            return
+        self._pending_log = None
+        self._ready = False
         self.setHtml(self._html, QUrl())
+
+    def _apply_pending_log(self) -> None:
+        log, self._pending_log = self._pending_log, None
+        if log is None:
+            return
+        self.page().runJavaScript(
+            "(function(h){var l=document.querySelector('.log');"
+            "if(l){l.outerHTML=h;}window.scrollTo(0,0);})("
+            + json.dumps(log)
+            + ");"
+        )
 
     def document_html(self) -> str:
         return self._html
@@ -223,6 +252,8 @@ class JournalDocumentView(QWebEngineView):
 
     def _on_loaded(self, ok: bool) -> None:
         self._ready = bool(ok)
+        if ok and not self._writable:
+            self._apply_pending_log()
         if not ok or not self._writable:
             return
         focus = ""

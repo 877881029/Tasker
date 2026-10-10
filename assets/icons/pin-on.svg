@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+  <title>Pinned</title>
+  <g transform="rotate(45 12 12)" fill="#0969da" stroke="#0969da" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M8.5 3.5h7"/>
+    <path d="M10 3.5v5l-3 3.5h10l-3-3.5v-5z"/>
+    <path d="M12 12v8.5"/>
+  </g>
+</svg>

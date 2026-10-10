@@ -1,3 +1,4 @@
+import pathlib
 from dataclasses import replace
 
 from PySide6.QtCore import QEvent, QPoint, QRect, QSize, Qt
@@ -575,3 +576,22 @@ def test_card_status_menu_changes_state_and_syncs_detail(qtbot, tmp_path, monkey
     assert dock._detail.status_btn.text().startswith("已完成")
     assert DONE_DOT in dock.cards()[0].importance.styleSheet()
     assert dock.tray.contextMenu().objectName() == "trayMenu"
+
+
+def test_pin_icon_is_a_pushpin_that_fills_when_pinned(qtbot, tmp_path):
+    from PySide6.QtGui import QIcon
+
+    from tasker.shell.window import DockWindow
+    from tasker.store import Store
+    from tasker.theme import COBALT, INK
+
+    dock = DockWindow(Store(tmp_path / "tasker.sqlite"))
+    qtbot.addWidget(dock)
+    icon = dock.pin_btn.icon()
+    off = icon.pixmap(QSize(32, 32), QIcon.Mode.Normal, QIcon.State.Off).toImage()
+    on = icon.pixmap(QSize(32, 32), QIcon.Mode.Normal, QIcon.State.On).toImage()
+    assert off != on
+    root = pathlib.Path(__file__).resolve().parents[1] / "assets" / "icons"
+    assert INK.lower() in (root / "pin.svg").read_text(encoding="utf-8").lower()
+    on_svg = (root / "pin-on.svg").read_text(encoding="utf-8").lower()
+    assert COBALT.lower() in on_svg and 'fill="none"' not in on_svg.split("<path")[0]

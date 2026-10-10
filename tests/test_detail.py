@@ -493,3 +493,20 @@ def test_delete_confirmation_resets_on_load_and_timeout(qtbot, tmp_path, monkeyp
     win.delete_btn.click()
     qtbot.waitUntil(lambda: win.delete_btn.text() == "删除", timeout=500)
     assert store.get(second.id) is not None
+
+
+def test_switching_items_swaps_journal_in_place_without_navigation(qtbot):
+    from tasker.shell.journal_edit import JournalDocumentView
+
+    view = JournalDocumentView()
+    qtbot.addWidget(view)
+    with qtbot.waitSignal(view.loadFinished, timeout=10000):
+        view.set_entries([("261010.3PM", "first")])
+    navigations = []
+    view.setHtml = lambda *a, **k: navigations.append(a)
+    scripts = []
+    view.page().runJavaScript = lambda js, *a: scripts.append(js)
+    view.set_entries([("261011.9AM", "second")])
+    assert navigations == []
+    assert any("second" in js and ".log" in js for js in scripts)
+    assert "second" in view.document_html()

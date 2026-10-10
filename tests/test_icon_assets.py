@@ -45,6 +45,7 @@ def test_icon_files_exist():
         "add.svg",
         "hide.svg",
         "pin.svg",
+        "pin-on.svg",
         "search.svg",
         "trash.svg",
     ]
