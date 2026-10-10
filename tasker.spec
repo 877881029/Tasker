@@ -33,6 +33,7 @@ a = Analysis(
         (str(ROOT / "assets/icons/hide.svg"), "assets/icons"),
         (str(ROOT / "assets/icons/pin.svg"), "assets/icons"),
         (str(ROOT / "assets/icons/search.svg"), "assets/icons"),
+        (str(ROOT / "assets/icons/trash.svg"), "assets/icons"),
         (str(ROOT / "VERSION"), "."),
     ],
     hiddenimports=pyside6_hidden,

@@ -33,19 +33,23 @@ from PySide6.QtWidgets import (
 
 from tasker.resources import resource_path
 from tasker.shell.detail import DetailWindow
+from tasker.shell.status import apply_status, build_status_menu, style_menu
 from tasker.store import Item, Store
 from tasker.theme import (
     CARD,
+    CHROME,
     COBALT,
-    DONE_DOT,
+    HOVER,
     INK,
     LINE,
+    LINE_STRONG,
     MUTED,
-    PAPER,
-    PENDING_DOT,
-    URGENT_DOT,
+    SHELL_RADIUS,
+    STATE_DOT,
+    STATE_LABEL,
     card_style,
     dock_style,
+    ui_font,
 )
 
 
@@ -99,6 +103,8 @@ IGNORE_NAMES = frozenset(
         "doneBox",
         "importance",
         "deleteBtn",
+        "statusPill",
+        "detailTitle",
     }
 )
 
@@ -137,7 +143,7 @@ def paper_corner_radius(geo: QRect, avail: QRect, slack: int = 2) -> int:
         and abs(geo.height() - avail.height()) <= slack
     ):
         return 0
-    return 16
+    return SHELL_RADIUS
 
 
 def round_window_mask(rect: QRect, radius: int) -> QRegion | None:
@@ -149,6 +155,8 @@ def round_window_mask(rect: QRect, radius: int) -> QRegion | None:
 
 
 class SearchLineEdit(QLineEdit):
+    RADIUS = 8
+
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
@@ -162,7 +170,9 @@ class SearchLineEdit(QLineEdit):
         painter.setPen(Qt.PenStyle.NoPen)
         painter.setBrush(QColor(CARD))
         painter.drawRoundedRect(
-            QRectF(self.rect()).adjusted(0.5, 0.5, -0.5, -0.5), 12, 12
+            QRectF(self.rect()).adjusted(0.5, 0.5, -0.5, -0.5),
+            self.RADIUS,
+            self.RADIUS,
         )
         painter.end()
         super().paintEvent(event)
@@ -171,25 +181,27 @@ class SearchLineEdit(QLineEdit):
         elif self.underMouse():
             color, width = MUTED, 1.0
         else:
-            color, width = LINE, 1.0
+            color, width = LINE_STRONG, 1.0
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         surface_rect = QRectF(self.rect()).adjusted(0.5, 0.5, -0.5, -0.5)
         painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_Multiply)
         painter.setPen(Qt.PenStyle.NoPen)
         painter.setBrush(QColor(CARD))
-        painter.drawRoundedRect(surface_rect, 12, 12)
+        painter.drawRoundedRect(surface_rect, self.RADIUS, self.RADIUS)
         painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceOver)
         corners = QPainterPath()
         corners.setFillRule(Qt.FillRule.OddEvenFill)
         corners.addRect(QRectF(self.rect()))
-        corners.addRoundedRect(surface_rect, 12, 12)
-        painter.fillPath(corners, QColor(PAPER))
+        corners.addRoundedRect(surface_rect, self.RADIUS, self.RADIUS)
+        painter.fillPath(corners, QColor(CHROME))
         painter.setBrush(Qt.BrushStyle.NoBrush)
         painter.setPen(QPen(QColor(color), width))
         inset = width / 2
         painter.drawRoundedRect(
-            QRectF(self.rect()).adjusted(inset, inset, -inset, -inset), 12, 12
+            QRectF(self.rect()).adjusted(inset, inset, -inset, -inset),
+            self.RADIUS,
+            self.RADIUS,
         )
 
 
@@ -226,42 +238,58 @@ def _lparam_to_local(window: QWidget, x: int, y: int) -> QPoint:
 
 
 class ItemCard(QWidget):
-    def __init__(self, store: Store, item: Item, on_open, parent=None) -> None:
+    DOT = 10
+
+    def __init__(
+        self, store: Store, item: Item, on_open, on_status=None, parent=None
+    ) -> None:
         super().__init__(parent)
         self._store = store
         self.item_id = item.id
         self._on_open = on_open
+        self._on_status = on_status
+        self._state = item.state
         self.setObjectName("itemCard")
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        self.setAttribute(Qt.WidgetAttribute.WA_Hover, True)
         self.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Maximum)
-        self.setMinimumHeight(88)
+        self.setMinimumHeight(40)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.customContextMenuRequested.connect(self._show_status_menu)
         layout = QHBoxLayout(self)
-        layout.setContentsMargins(14, 12, 14, 12)
+        layout.setContentsMargins(10, 8, 10, 8)
         layout.setSpacing(10)
         self.importance = QToolButton()
         self.importance.setObjectName("importance")
-        self.importance.setFixedSize(20, 20)
+        self.importance.setFixedSize(self.DOT, self.DOT)
         self.importance.setAutoRaise(True)
         self.importance.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.importance.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
         self.title = QLabel()
         self.title.setObjectName("titleField")
         self.title.setWordWrap(True)
-        self.title.setMinimumHeight(72)
         self.title.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.title.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
-        layout.addWidget(self.importance, 0, Qt.AlignmentFlag.AlignTop)
+        dot_box = QVBoxLayout()
+        dot_box.setContentsMargins(0, 5, 0, 0)
+        dot_box.setSpacing(0)
+        dot_box.addWidget(self.importance)
+        dot_box.addStretch(1)
+        layout.addLayout(dot_box)
         layout.addWidget(self.title, 1)
         self._selected = False
         self.apply_item(item)
 
+    def is_selected(self) -> bool:
+        return self._selected
+
     def set_selected(self, selected: bool) -> None:
+        if selected == self._selected:
+            return
         self._selected = selected
-        item = self._store.get(self.item_id)
-        if item is not None:
-            self.apply_item(item)
+        self._paint_surface()
 
     def mousePressEvent(self, event) -> None:
         if event.button() == Qt.MouseButton.LeftButton:
@@ -275,27 +303,49 @@ class ItemCard(QWidget):
             self._on_open(self.item_id)
             event.accept()
             return
+        if event.key() == Qt.Key.Key_Menu:
+            self._show_status_menu(QPoint(12, self.height() // 2))
+            event.accept()
+            return
         super().keyPressEvent(event)
 
-    def apply_item(self, item: Item) -> None:
-        edge = f"border:2px solid {COBALT};" if self._selected else ""
+    def status_menu(self) -> QMenu:
+        return build_status_menu(self._state, self._pick_status, self)
+
+    def _show_status_menu(self, pos: QPoint) -> None:
+        self.status_menu().exec(self.mapToGlobal(pos))
+
+    def _pick_status(self, state: str) -> None:
+        item = apply_status(self._store, self.item_id, state)
+        self.apply_item(item)
+        if self._on_status is not None:
+            self._on_status(self.item_id)
+
+    def _paint_surface(self) -> None:
+        hover = "" if self._selected else f"QWidget#itemCard:hover{{background:{HOVER};}}"
         self.setStyleSheet(
-            f"QWidget#itemCard{{{card_style(item.state)}{edge}}}"
-            f"QWidget#itemCard:hover{{border:1px solid {COBALT};}}"
+            f"QWidget#itemCard{{{card_style(self._state, self._selected)}}}"
+            f"{hover}"
+            f"QWidget#itemCard:focus{{border:2px solid {COBALT};}}"
         )
-        dot = {"pending": PENDING_DOT, "urgent": URGENT_DOT, "done": DONE_DOT}[item.state]
+
+    def apply_item(self, item: Item) -> None:
+        self._state = item.state
+        self._paint_surface()
+        radius = self.DOT // 2
         self.importance.setStyleSheet(
-            f"QToolButton{{background:{dot};border:none;border-radius:10px;}}"
+            f"QToolButton{{background:{STATE_DOT[item.state]};border:none;"
+            f"border-radius:{radius}px;}}"
         )
         text = item.title.strip()
         self.title.setText(text or "标题")
-        color = INK if text else MUTED
-        self.title.setStyleSheet(f"color:{color};font-size:15px;")
-        state = {"pending": "普通", "urgent": "紧急", "done": "已完成"}[item.state]
+        color = INK if text and item.state != "done" else MUTED
+        self.title.setStyleSheet(f"color:{color};font-size:14px;")
+        state = STATE_LABEL[item.state]
         name = text or "无标题"
         self.setAccessibleName(f"{state}任务：{name}")
-        self.setAccessibleDescription("按 Enter 或空格打开详情")
-        self.setToolTip(f"{state} · {name}")
+        self.setAccessibleDescription("按 Enter 或空格打开详情，菜单键或右键改状态")
+        self.setToolTip(f"{state} · {name} · 右键改状态")
         self.importance.setAccessibleName(f"任务状态：{state}")
 
 
@@ -350,17 +400,18 @@ class DockWindow(QWidget):
         ico = resource_path("assets", "icons", "tasker.ico")
         if ico.exists():
             self.setWindowIcon(QIcon(str(ico)))
+        self.setFont(ui_font(13))
         self.setStyleSheet(dock_style())
         self.chrome = ChromeBar(self)
         header = QHBoxLayout(self.chrome)
-        header.setContentsMargins(14, 12, 14, 8)
-        header.setSpacing(8)
+        header.setContentsMargins(12, 10, 10, 8)
+        header.setSpacing(4)
         self.search = SearchLineEdit()
         self.search.setObjectName("search")
         self.search.setFrame(False)
         self.search.setPlaceholderText("查找…")
         self.search.setAccessibleName("搜索事项")
-        self.search.setFixedHeight(38)
+        self.search.setFixedHeight(34)
         search_icon = resource_path("assets", "icons", "search.svg")
         if search_icon.exists():
             self.search.addAction(
@@ -375,8 +426,8 @@ class DockWindow(QWidget):
         add_icon = resource_path("assets", "icons", "add.svg")
         if add_icon.exists():
             self.add_btn.setIcon(QIcon(str(add_icon)))
-            self.add_btn.setIconSize(QSize(18, 18))
-        self.add_btn.setFixedSize(36, 36)
+            self.add_btn.setIconSize(QSize(16, 16))
+        self.add_btn.setFixedSize(32, 32)
         self.add_btn.setToolTip("新建事项")
         self.add_btn.setAccessibleName("新建事项")
         self.add_btn.clicked.connect(self._add)
@@ -386,8 +437,8 @@ class DockWindow(QWidget):
         pin_icon = resource_path("assets", "icons", "pin.svg")
         if pin_icon.exists():
             self.pin_btn.setIcon(QIcon(str(pin_icon)))
-            self.pin_btn.setIconSize(QSize(18, 18))
-        self.pin_btn.setFixedSize(36, 36)
+            self.pin_btn.setIconSize(QSize(16, 16))
+        self.pin_btn.setFixedSize(32, 32)
         self.pin_btn.setToolTip("钉在其它窗口上面")
         self.pin_btn.setAccessibleName("置顶窗口")
         self.pin_btn.setCheckable(True)
@@ -397,12 +448,13 @@ class DockWindow(QWidget):
         hide_icon = resource_path("assets", "icons", "hide.svg")
         if hide_icon.exists():
             self.close_btn.setIcon(QIcon(str(hide_icon)))
-            self.close_btn.setIconSize(QSize(18, 18))
-        self.close_btn.setFixedSize(36, 36)
+            self.close_btn.setIconSize(QSize(16, 16))
+        self.close_btn.setFixedSize(32, 32)
         self.close_btn.setToolTip("隐藏到托盘")
         self.close_btn.setAccessibleName("隐藏到托盘")
         self.close_btn.clicked.connect(self._close_dock)
         header.addWidget(self.search, 1)
+        header.addSpacing(4)
         header.addWidget(self.add_btn)
         header.addWidget(self.pin_btn)
         header.addWidget(self.close_btn)
@@ -414,19 +466,20 @@ class DockWindow(QWidget):
         self.list_host.setObjectName("listHost")
         self.list_layout = QVBoxLayout(self.list_host)
         self.list_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
-        self.list_layout.setContentsMargins(12, 8, 12, 12)
-        self.list_layout.setSpacing(10)
+        self.list_layout.setContentsMargins(8, 2, 8, 10)
+        self.list_layout.setSpacing(2)
         scroll = QScrollArea()
+        self.list_scroll = scroll
         scroll.setObjectName("listScroll")
         scroll.setWidgetResizable(True)
         scroll.setWidget(self.list_host)
         scroll.setFrameShape(scroll.Shape.NoFrame)
         scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        paper = QColor(PAPER)
+        rail_fill = QColor(CHROME)
         for widget in (scroll, scroll.viewport(), self.list_host):
             palette = widget.palette()
-            palette.setColor(QPalette.ColorRole.Window, paper)
-            palette.setColor(QPalette.ColorRole.Base, paper)
+            palette.setColor(QPalette.ColorRole.Window, rail_fill)
+            palette.setColor(QPalette.ColorRole.Base, rail_fill)
             widget.setPalette(palette)
             widget.setAutoFillBackground(True)
         self.setAutoFillBackground(False)
@@ -453,16 +506,16 @@ class DockWindow(QWidget):
         self.detail_host.setObjectName("detailHost")
         self.detail_host.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self._detail_box = QVBoxLayout(self.detail_host)
-        self._detail_box.setContentsMargins(12, 12, 4, 12)
+        self._detail_box.setContentsMargins(0, 0, 0, 0)
         self._detail_box.setSpacing(0)
         self.detail_host.hide()
         self.detail_host.setMaximumWidth(0)
 
         self.notch = QWidget()
         self.notch.setObjectName("notch")
-        self.notch.setFixedWidth(16)
+        self.notch.setFixedWidth(1)
         self.notch.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
-        self.notch.setStyleSheet(f"background:{PAPER};")
+        self.notch.setStyleSheet(f"background:{LINE};")
         self.notch.hide()
 
         columns = QHBoxLayout()
@@ -491,7 +544,8 @@ class DockWindow(QWidget):
         if self._icon_path.exists():
             self.tray.setIcon(QIcon(str(self._icon_path)))
         self.tray.setToolTip("Tasker")
-        menu = QMenu()
+        menu = style_menu(QMenu())
+        menu.setObjectName("trayMenu")
         show_action = menu.addAction("显示")
         show_action.triggered.connect(self.show_from_tray)
         quit_action = menu.addAction("退出")
@@ -652,6 +706,34 @@ class DockWindow(QWidget):
         self.open_detail(item.id)
 
     def refresh(self) -> None:
+        bar = self.list_scroll.verticalScrollBar()
+        offset = bar.value()
+        self._rebuild_list()
+        bar.setValue(offset)
+
+    def cards(self) -> list[ItemCard]:
+        found: list[ItemCard] = []
+        for index in range(self.list_layout.count()):
+            widget = self.list_layout.itemAt(index).widget()
+            if isinstance(widget, ItemCard):
+                found.append(widget)
+        return found
+
+    def _sync_selection(self) -> None:
+        for card in self.cards():
+            card.set_selected(card.item_id == self._open_item_id)
+
+    def _on_card_status(self, item_id: str) -> None:
+        if self._detail is not None and self._detail.isVisible() and item_id == self._open_item_id:
+            item = self._store.get(item_id)
+            if item is not None:
+                self._detail.sync_status(item)
+        self.refresh()
+
+    def _on_item_changed(self, _item_id: str) -> None:
+        self.refresh()
+
+    def _rebuild_list(self) -> None:
         query = self.search.text()
         while self.list_layout.count():
             child = self.list_layout.takeAt(0)
@@ -677,7 +759,7 @@ class DockWindow(QWidget):
             return
         previous: QWidget = self.close_btn
         for item in items:
-            card = ItemCard(self._store, item, self.open_detail)
+            card = ItemCard(self._store, item, self.open_detail, self._on_card_status)
             card.set_selected(item.id == self._open_item_id)
             self.list_layout.addWidget(card)
             QWidget.setTabOrder(previous, card)
@@ -698,13 +780,14 @@ class DockWindow(QWidget):
             )
             self._detail_box.addWidget(self._detail, 1)
             self._detail.closed.connect(self._on_detail_closed)
+            self._detail.changed.connect(self._on_item_changed)
         self._detail.load(item)
         self.detail_host.setMaximumWidth(16777215)
         self.notch.show()
         self.detail_host.show()
         self._set_bubble(True)
         self._place()
-        self.refresh()
+        self._sync_selection()
         self.show()
         self._detail.show()
 

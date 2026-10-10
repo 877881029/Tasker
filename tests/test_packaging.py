@@ -15,6 +15,7 @@ def test_tasker_spec_onedir_icon_and_webengine() -> None:
     assert "assets/icons/hide.svg" in normalized
     assert "assets/icons/pin.svg" in normalized
     assert "assets/icons/search.svg" in normalized
+    assert "assets/icons/trash.svg" in normalized
     assert "QtSvg" in spec
     assert "QtWebEngineProcess.exe" in spec
     assert 'collect_submodules(\'PySide6.QtWebEngineWidgets\')' in spec

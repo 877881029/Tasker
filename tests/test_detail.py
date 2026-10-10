@@ -1,3 +1,4 @@
+import re
 from datetime import datetime
 from dataclasses import replace
 
@@ -37,9 +38,9 @@ def test_journal_document_html_keeps_one_stamp_column():
     assert "grid-template-columns" in html
     assert html.count("class='log'") + html.count('class="log"') == 1
     assert html.count("class='stamp") + html.count('class="stamp') == 2
-    assert "Candara" in html
-    assert "16px" in html
-    assert "1.72" in html
+    assert "Segoe UI" in html
+    assert "15px" in html
+    assert "1.65" in html
     assert html.index("260917.11AM") < html.index("260916.2PM")
 
 
@@ -49,8 +50,8 @@ def test_journal_document_html_write_mode_is_contenteditable():
         writable=True,
     )
     assert "contenteditable" in html
-    assert "16px" in html
-    assert "Candara" in html
+    assert "15px" in html
+    assert "Segoe UI" in html
     assert "_journalDirty" in html
     assert "preventDefault" in html
     html_ro = journal_document_html([("260918.10AM", "正文")])
@@ -204,8 +205,8 @@ def test_journal_uses_reader_document_font(qtbot, tmp_path, monkeypatch):
     win.load(store.create())
     win.begin_write()
     edit = win.journal.head_edit()
-    assert "Candara" in edit.font().families() or edit.font().family()
-    assert edit.font().pixelSize() == 16
+    assert "Segoe UI" in edit.font().families()
+    assert edit.font().pixelSize() == 15
     assert win.journal.stack.currentWidget() is edit
 
 
@@ -217,9 +218,9 @@ def test_readonly_journal_uses_reader_document_css(qtbot, tmp_path, monkeypatch)
     qtbot.addWidget(win)
     win.load(item)
     html = win.journal.document_html()
-    assert "Candara" in html
-    assert "1.72" in html
-    assert "16px" in html
+    assert "Segoe UI" in html
+    assert "1.65" in html
+    assert "15px" in html
     assert INK.lstrip("#") in html.lower() or INK in html
     assert win.journal.stack.currentWidget() is win.journal.document_view
     win.begin_write()
@@ -378,12 +379,18 @@ def test_journal_status_tracks_read_write_and_saved_modes(qtbot, tmp_path, monke
     assert win.journal_status.text() == "Ctrl+I 写入 · Ctrl+S 保存 · Esc 收起"
     assert win.journal_status.focusPolicy() == Qt.FocusPolicy.NoFocus
 
+    assert win.journal_dot.isHidden()
+
     win.begin_write()
     assert win.journal_status.text() == "正在写入 · Ctrl+S 保存 · Esc 保存并收起"
+    assert not win.journal_dot.isHidden()
 
     _insert_head(win, "状态反馈")
     win.save_keep_open()
-    assert win.journal_status.text() == "已保存 · Ctrl+I 继续写入 · Esc 收起"
+    assert re.fullmatch(
+        r"已保存 \d\d:\d\d · Ctrl\+I 继续写入 · Esc 收起", win.journal_status.text()
+    )
+    assert win.journal_dot.isHidden()
 
     win.load(second)
     assert win.journal_status.text() == "Ctrl+I 写入 · Ctrl+S 保存 · Esc 收起"
@@ -398,9 +405,12 @@ def test_detail_controls_expose_accessible_names(qtbot, tmp_path, monkeypatch):
     win.load(item)
 
     assert win.title_edit.accessibleName() == "任务标题"
-    assert win.done.accessibleName() == "完成任务"
-    assert "任务状态" in win.importance.accessibleName()
+    assert getattr(win, "done", None) is None
+    assert getattr(win, "importance", None) is None
+    assert win.status_btn.accessibleName() == "任务状态：普通"
     assert win.delete_btn.accessibleName() == "删除任务"
+    assert win.delete_btn.toolTip() == "删除"
+    assert not win.delete_btn.icon().isNull()
     assert win.journal.head_edit().accessibleName() == "任务日志编辑器"
     assert win.journal.document_view.accessibleName() == "任务日志只读内容"
 
@@ -444,9 +454,17 @@ def test_detail_cycle_and_delete(qtbot, tmp_path, monkeypatch):
     win = DetailWindow(store)
     qtbot.addWidget(win)
     win.load(item)
-    win.importance.click()
+    labels = [action.text() for action in win.status_btn.menu().actions()]
+    assert labels == ["普通", "紧急", "已完成"]
+    win.status_btn.menu().actions()[1].trigger()
     loaded = store.get(item.id)
     assert loaded is not None and loaded.state == "urgent"
+    assert win.status_btn.text().startswith("紧急")
+    assert win.status_btn.menu().actions()[1].isChecked()
+    win.set_status("done")
+    assert store.get(item.id).state == "done"
+    win.set_status("urgent")
+    assert store.get(item.id).state == "urgent"
     win.delete_btn.click()
     assert store.get(item.id) is not None
     assert win.delete_btn.text() == "确认删除"

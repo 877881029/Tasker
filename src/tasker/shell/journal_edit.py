@@ -20,7 +20,7 @@ from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWidgets import QFrame, QPlainTextEdit, QSizePolicy, QWidget
 
 from tasker.preview.md_visual import TaskerWebPage
-from tasker.theme import COBALT, INK, MUTED, PAPER, wrap_document_html
+from tasker.theme import COBALT, INK, MUTED, PAPER, UI_FAMILIES, UI_FONT, wrap_document_html
 
 
 _READ_WRITE_STATE_JS = """
@@ -113,17 +113,17 @@ def journal_document_html(
             f'<div class="txt"{edit}>{body}</div>'
         )
     extra = (
-        "body{padding:8px 20px 32px 12px;font-size:16px;line-height:1.72;"
-        'font-family:Candara,Calibri,"Segoe UI",sans-serif}'
+        "body{padding:12px 20px 32px 4px;font-size:15px;line-height:1.65;"
+        f"font-family:{UI_FONT}}}"
         ".log{display:grid;grid-template-columns:7.75rem minmax(0,1fr);"
         "column-gap:12px;row-gap:1.15em;align-items:start}"
-        f".stamp{{text-align:right;color:{MUTED};font-size:13px;font-weight:600;"
-        "line-height:1.72;white-space:nowrap;-webkit-user-select:none;"
+        f".stamp{{text-align:right;color:{MUTED};font-size:12px;font-weight:600;"
+        "line-height:24.75px;padding-top:1px;white-space:nowrap;-webkit-user-select:none;"
         "user-select:none}}"
         f".stamp.newest{{color:{COBALT}}}"
-        f".txt{{color:{INK};font-size:16px;line-height:1.72;min-width:0;"
+        f".txt{{color:{INK};font-size:15px;line-height:1.65;min-width:0;"
         "overflow-wrap:anywhere}}"
-        f".txt[contenteditable]{{outline:none;caret-color:{INK};min-height:1.72em}}"
+        f".txt[contenteditable]{{outline:none;caret-color:{COBALT};min-height:1.65em}}"
     )
     script = ""
     if writable:
@@ -146,9 +146,9 @@ class JournalDocumentView(QWebEngineView):
         settings.setAttribute(
             QWebEngineSettings.WebAttribute.LocalContentCanAccessRemoteUrls, False
         )
-        settings.setFontFamily(QWebEngineSettings.FontFamily.StandardFont, "Candara")
-        settings.setFontFamily(QWebEngineSettings.FontFamily.SansSerifFont, "Candara")
-        settings.setFontSize(QWebEngineSettings.FontSize.DefaultFontSize, 16)
+        settings.setFontFamily(QWebEngineSettings.FontFamily.StandardFont, UI_FAMILIES[0])
+        settings.setFontFamily(QWebEngineSettings.FontFamily.SansSerifFont, UI_FAMILIES[0])
+        settings.setFontSize(QWebEngineSettings.FontSize.DefaultFontSize, 15)
         self.setPage(page)
         self._html = ""
         self._writable = False
@@ -272,12 +272,13 @@ class JournalEditor(QPlainTextEdit):
         self.setPlaceholderText("记录…")
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.setStyleSheet(
-            f"QPlainTextEdit#journalEditor{{background:{PAPER};color:{INK};border:none;font-size:16px;}}"
+            f"QPlainTextEdit#journalEditor{{background:{PAPER};color:{INK};border:none;font-size:15px;"
+            f"selection-background-color:{COBALT};}}"
         )
-        self.setFont(_document_font(16))
+        self.setFont(_document_font(15))
         self.document().setDefaultFont(self.font())
         self._gutter_font = QFont(self.font())
-        self._gutter_font.setPixelSize(13)
+        self._gutter_font.setPixelSize(12)
         self._gutter_font.setWeight(QFont.Weight.DemiBold)
         self._paint_opaque_ink()
         self._gutter = _StampGutter(self)
@@ -378,7 +379,7 @@ class JournalEditor(QPlainTextEdit):
 
     def _apply_body_format(self, block: QTextBlock) -> None:
         fmt = block.blockFormat()
-        fmt.setLineHeight(172.0, 1)
+        fmt.setLineHeight(165.0, 1)
         cursor = QTextCursor(block)
         cursor.setBlockFormat(fmt)
 
@@ -447,7 +448,7 @@ def _stamp_of(block: QTextBlock) -> str:
 
 def _document_font(pixel_size: int) -> QFont:
     font = QFont()
-    font.setFamilies(["Candara", "Calibri", "Segoe UI"])
+    font.setFamilies(UI_FAMILIES)
     font.setStyleHint(QFont.StyleHint.SansSerif)
     font.setPixelSize(pixel_size)
     font.setWeight(QFont.Weight.Normal)

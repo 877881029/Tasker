@@ -2,15 +2,22 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from PySide6.QtCore import QRect, Qt, QTimer, Signal
-from PySide6.QtGui import QCloseEvent, QFont, QIcon, QKeySequence, QShortcut
+from PySide6.QtCore import QRect, QSize, Qt, QTimer, Signal
+from PySide6.QtGui import (
+    QCloseEvent,
+    QColor,
+    QIcon,
+    QKeySequence,
+    QPainter,
+    QPixmap,
+    QShortcut,
+)
 from PySide6.QtWidgets import (
-    QCheckBox,
+    QFrame,
     QHBoxLayout,
     QLabel,
     QLineEdit,
     QPlainTextEdit,
-    QPushButton,
     QStackedWidget,
     QToolButton,
     QVBoxLayout,
@@ -20,17 +27,24 @@ from PySide6.QtWidgets import (
 from tasker.journal import dump_journal, parse_journal, prepend_record
 from tasker.resources import resource_path
 from tasker.shell.journal_edit import JournalDocumentView, JournalEditor
+from tasker.shell.status import apply_status, build_status_menu
 from tasker.store import Item, Store
 from tasker.theme import (
+    CARD,
     COBALT,
-    DONE_DOT,
+    HOVER,
     INK,
     LINE,
+    MUTED,
     PAPER,
-    PENDING_DOT,
+    SELECTED,
+    STATE_DOT,
+    STATE_LABEL,
+    STATE_PILL,
     URGENT_BG,
     URGENT_DOT,
     URGENT_LINE,
+    ui_font,
 )
 
 
@@ -131,21 +145,38 @@ class JournalPane(QWidget):
         return [(stamp, text) for stamp, text in self.editor.entries() if text.strip()]
 
 
+def _dot_icon(color: str, size: int = 8) -> QIcon:
+    pixmap = QPixmap(size * 2, size * 2)
+    pixmap.setDevicePixelRatio(2.0)
+    pixmap.fill(Qt.GlobalColor.transparent)
+    painter = QPainter(pixmap)
+    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+    painter.setPen(Qt.PenStyle.NoPen)
+    painter.setBrush(QColor(color))
+    painter.drawEllipse(0, 0, size, size)
+    painter.end()
+    return QIcon(pixmap)
+
+
 class DetailWindow(QWidget):
     closed = Signal()
+    changed = Signal(str)
     DELETE_CONFIRM_MS = 4000
     _READ_STATUS = "Ctrl+I 写入 · Ctrl+S 保存 · Esc 收起"
     _WRITE_STATUS = "正在写入 · Ctrl+S 保存 · Esc 保存并收起"
-    _SAVED_STATUS = "已保存 · Ctrl+I 继续写入 · Esc 收起"
+    _SAVED_STATUS = "已保存 {time} · Ctrl+I 继续写入 · Esc 收起"
 
     def __init__(self, store: Store, parent=None) -> None:
         super().__init__(parent)
         self._store = store
         self._item_id: str | None = None
+        self._state = "pending"
+        self.setObjectName("detail")
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self.setStyleSheet(
-            f"background:{PAPER};color:{INK};"
-            "font-family:Candara,Calibri,\"Segoe UI\";"
+            f"QWidget#detail{{background:{PAPER};color:{INK};}}"
         )
+        self.setFont(ui_font(13))
         if parent is None:
             self.setWindowTitle("详情")
             self.setWindowFlags(
@@ -157,34 +188,39 @@ class DetailWindow(QWidget):
         if ico.exists():
             self.setWindowIcon(QIcon(str(ico)))
 
+        self.status_btn = QToolButton()
+        self.status_btn.setObjectName("statusPill")
+        self.status_btn.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+        self.status_btn.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+        self.status_btn.setIconSize(QSize(8, 8))
+        self.status_btn.setFixedHeight(26)
+        self.status_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.status_btn.setToolTip("改状态：普通 / 紧急 / 已完成")
+        self.status_btn.setAccessibleDescription("打开菜单选择普通、紧急或已完成")
+
         self.title_edit = QLineEdit()
         self.title_edit.setObjectName("detailTitle")
         self.title_edit.setPlaceholderText("标题")
         self.title_edit.setAccessibleName("任务标题")
-        self.title_edit.setMinimumHeight(40)
+        self.title_edit.setFrame(False)
+        self.title_edit.setMinimumHeight(38)
         self.title_edit.setStyleSheet(
             f"QLineEdit#detailTitle{{background:transparent;color:{INK};"
-            f"border:1px solid {LINE};border-radius:4px;padding:4px 8px;}}"
-            f"QLineEdit#detailTitle:focus{{border:1px solid {COBALT};}}"
+            "border:2px solid transparent;border-radius:6px;padding:2px 6px;"
+            f"selection-background-color:{COBALT};}}"
+            f"QLineEdit#detailTitle:hover{{background:{HOVER};}}"
+            f"QLineEdit#detailTitle:focus{{background:{CARD};border:2px solid {COBALT};}}"
         )
-        title_font = QFont(self.title_edit.font())
-        title_font.setPointSize(16)
-        self.title_edit.setFont(title_font)
+        self.title_edit.setFont(ui_font(20, 600))
 
-        self.done = QCheckBox("完成")
-        self.done.setObjectName("doneBox")
-        self.done.setAccessibleName("完成任务")
-        self.done.setStyleSheet("font-size:15px;")
-        self.done.toggled.connect(self._toggle_done)
-        self.importance = QToolButton()
-        self.importance.setObjectName("importance")
-        self.importance.setFixedSize(32, 32)
-        self.importance.setAutoRaise(True)
-        self.importance.setToolTip("切换普通 / 紧急")
-        self.importance.setAccessibleDescription("点击切换普通和紧急状态")
-        self.importance.clicked.connect(self._cycle)
-        self.delete_btn = QPushButton("删除")
+        self.delete_btn = QToolButton()
         self.delete_btn.setObjectName("deleteBtn")
+        trash = resource_path("assets", "icons", "trash.svg")
+        if trash.exists():
+            self.delete_btn.setIcon(QIcon(str(trash)))
+        self.delete_btn.setIconSize(QSize(16, 16))
+        self.delete_btn.setFixedHeight(32)
+        self.delete_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self._delete_armed = False
         self._delete_timer = QTimer(self)
         self._delete_timer.setSingleShot(True)
@@ -193,27 +229,42 @@ class DetailWindow(QWidget):
         self.delete_btn.clicked.connect(self.delete_item)
 
         bar = QHBoxLayout()
-        bar.setSpacing(10)
-        bar.addWidget(self.importance)
+        bar.setContentsMargins(0, 0, 0, 0)
+        bar.setSpacing(8)
+        bar.addWidget(self.status_btn, 0, Qt.AlignmentFlag.AlignVCenter)
         bar.addWidget(self.title_edit, 1)
-        bar.addWidget(self.done)
-        bar.addWidget(self.delete_btn)
+        bar.addWidget(self.delete_btn, 0, Qt.AlignmentFlag.AlignVCenter)
 
+        self.journal = JournalPane()
+
+        self.footer = QFrame()
+        self.footer.setObjectName("detailFooter")
+        self.footer.setStyleSheet(
+            f"QFrame#detailFooter{{background:transparent;border:none;"
+            f"border-top:1px solid {LINE};}}"
+        )
+        footer_row = QHBoxLayout(self.footer)
+        footer_row.setContentsMargins(4, 8, 4, 0)
+        footer_row.setSpacing(6)
+        self.journal_dot = QLabel("●")
+        self.journal_dot.setObjectName("journalDot")
+        self.journal_dot.setStyleSheet(f"color:{COBALT};font-size:10px;")
+        self.journal_dot.hide()
         self.journal_status = QLabel(self._READ_STATUS)
         self.journal_status.setObjectName("journalStatus")
         self.journal_status.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.journal_status.setTextInteractionFlags(Qt.TextInteractionFlag.NoTextInteraction)
         self.journal_status.setAccessibleName("日志操作状态")
-        self.journal_status.setStyleSheet(
-            f"color:{INK};font-size:13px;padding:2px 0 4px 44px;"
-        )
+        self.journal_status.setStyleSheet(f"color:{MUTED};font-size:12px;")
+        footer_row.addWidget(self.journal_dot)
+        footer_row.addWidget(self.journal_status, 1)
 
-        self.journal = JournalPane()
         layout = QVBoxLayout(self)
-        layout.setSpacing(8)
+        layout.setContentsMargins(20, 14, 16, 10)
+        layout.setSpacing(10)
         layout.addLayout(bar)
-        layout.addWidget(self.journal_status)
         layout.addWidget(self.journal, 1)
+        layout.addWidget(self.footer)
 
         self.title_edit.editingFinished.connect(self._save_title)
         QShortcut(QKeySequence("Ctrl+I"), self, activated=self.begin_write)
@@ -224,23 +275,35 @@ class DetailWindow(QWidget):
         self._reset_delete_confirmation()
         self._item_id = item.id
         self.title_edit.blockSignals(True)
-        self.done.blockSignals(True)
         self.title_edit.setText(item.title)
-        self.done.setChecked(item.state == "done")
-        self._paint_importance(item)
+        self.title_edit.setCursorPosition(0)
         self.title_edit.blockSignals(False)
-        self.done.blockSignals(False)
+        self.sync_status(item)
         self.journal.load(item.body_md)
-        self.journal_status.setText(self._READ_STATUS)
+        self._set_journal_status(self._READ_STATUS)
+
+    def sync_status(self, item: Item) -> None:
+        if item.id != self._item_id:
+            return
+        self._state = item.state
+        self._paint_status()
+
+    def set_status(self, state: str) -> None:
+        if not self._item_id:
+            return
+        item = apply_status(self._store, self._item_id, state)
+        self.sync_status(item)
+        self.changed.emit(item.id)
 
     def begin_write(self) -> None:
         self.journal.begin_write()
-        self.journal_status.setText(self._WRITE_STATUS)
+        self._set_journal_status(self._WRITE_STATUS, writing=True)
 
     def save_keep_open(self) -> None:
         self.save_all()
         self.journal.set_all_readonly()
-        self.journal_status.setText(self._SAVED_STATUS)
+        stamp = datetime.now().strftime("%H:%M")
+        self._set_journal_status(self._SAVED_STATUS.format(time=stamp))
 
     def save_all(self) -> None:
         self._save_title()
@@ -258,11 +321,16 @@ class DetailWindow(QWidget):
             self._delete_armed = True
             self.delete_btn.setText("确认删除")
             self.delete_btn.setAccessibleName("确认删除任务")
+            self.delete_btn.setToolTip("再点一次删除，4 秒后取消")
+            self.delete_btn.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
+            self.delete_btn.setMinimumWidth(0)
+            self.delete_btn.setMaximumWidth(16777215)
             self.delete_btn.setStyleSheet(
-                f"QPushButton#deleteBtn{{background:{URGENT_BG};color:{INK};"
-                f"border:1px solid {URGENT_LINE};border-radius:4px;"
-                "padding:9px 13px;font-size:15px;}}"
-                f"QPushButton#deleteBtn:focus{{border:1px solid {COBALT};}}"
+                f"QToolButton#deleteBtn{{background:{URGENT_BG};color:{URGENT_DOT};"
+                f"border:1px solid {URGENT_LINE};border-radius:16px;"
+                "padding:0 14px;font-size:13px;font-weight:600;}}"
+                f"QToolButton#deleteBtn:hover{{border:1px solid {URGENT_DOT};}}"
+                f"QToolButton#deleteBtn:focus{{border:2px solid {COBALT};}}"
             )
             self._delete_timer.start(self.DELETE_CONFIRM_MS)
             return
@@ -278,36 +346,41 @@ class DetailWindow(QWidget):
         self._delete_armed = False
         self.delete_btn.setText("删除")
         self.delete_btn.setAccessibleName("删除任务")
+        self.delete_btn.setToolTip("删除")
+        self.delete_btn.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
+        self.delete_btn.setFixedWidth(32)
         self.delete_btn.setStyleSheet(
-            f"QPushButton#deleteBtn{{background:transparent;color:{INK};"
-            "border:1px solid transparent;border-radius:4px;"
-            "padding:9px 13px;font-size:15px;}"
-            f"QPushButton#deleteBtn:focus{{border:1px solid {COBALT};}}"
+            "QToolButton#deleteBtn{background:transparent;border:none;"
+            "border-radius:6px;padding:0;}"
+            f"QToolButton#deleteBtn:hover{{background:{HOVER};}}"
+            f"QToolButton#deleteBtn:pressed{{background:{SELECTED};}}"
+            f"QToolButton#deleteBtn:focus{{border:2px solid {COBALT};}}"
         )
 
-    def _toggle_done(self, checked: bool) -> None:
-        if not self._item_id:
-            return
-        item = self._store.set_done(self._item_id, checked)
-        self._paint_importance(item)
+    def _set_journal_status(self, text: str, *, writing: bool = False) -> None:
+        self.journal_status.setText(text)
+        self.journal_dot.setVisible(writing)
 
-    def _cycle(self) -> None:
-        if not self._item_id:
-            return
-        item = self._store.cycle_color(self._item_id)
-        self._paint_importance(item)
-        self.done.blockSignals(True)
-        self.done.setChecked(item.state == "done")
-        self.done.blockSignals(False)
-
-    def _paint_importance(self, item: Item) -> None:
-        dot = {"pending": PENDING_DOT, "urgent": URGENT_DOT, "done": DONE_DOT}[item.state]
-        state = {"pending": "普通", "urgent": "紧急", "done": "已完成"}[item.state]
-        self.importance.setAccessibleName(f"任务状态：{state}")
-        self.importance.setStyleSheet(
-            f"QToolButton{{background:{dot};border:none;border-radius:16px;}}"
-            f"QToolButton:focus{{border:2px solid {COBALT};}}"
+    def _paint_status(self) -> None:
+        state = self._state
+        bg, line = STATE_PILL[state]
+        dot = STATE_DOT[state]
+        label = STATE_LABEL[state]
+        self.status_btn.setText(f"{label}  ▾")
+        self.status_btn.setIcon(_dot_icon(dot))
+        self.status_btn.setAccessibleName(f"任务状态：{label}")
+        self.status_btn.setStyleSheet(
+            f"QToolButton#statusPill{{background:{bg};color:{INK};"
+            f"border:1px solid {line};border-radius:13px;padding:0 10px 0 8px;"
+            "font-size:12px;font-weight:600;}}"
+            f"QToolButton#statusPill:hover{{border:1px solid {dot};}}"
+            f"QToolButton#statusPill:focus{{border:2px solid {COBALT};}}"
+            "QToolButton#statusPill::menu-indicator{image:none;width:0;}"
         )
+        old = self.status_btn.menu()
+        self.status_btn.setMenu(build_status_menu(state, self.set_status, self))
+        if old is not None:
+            old.deleteLater()
 
     def closeEvent(self, event: QCloseEvent) -> None:
         if self._item_id:
@@ -321,9 +394,12 @@ class DetailWindow(QWidget):
         item = self._store.get(self._item_id)
         if item is None:
             return
+        if item.title == self.title_edit.text():
+            return
         from dataclasses import replace
 
         self._store.save(replace(item, title=self.title_edit.text()))
+        self.changed.emit(item.id)
 
     def _save_body(self) -> None:
         if not self._item_id:

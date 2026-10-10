@@ -46,6 +46,7 @@ def test_icon_files_exist():
         "hide.svg",
         "pin.svg",
         "search.svg",
+        "trash.svg",
     ]
     assert [name for name in expected if not (ICON_DIR / name).exists()] == []
 

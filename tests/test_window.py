@@ -24,7 +24,7 @@ from tasker.shell.window import (
     round_window_mask,
 )
 from tasker.store import Store
-from tasker.theme import DONE_BG, PAPER, dock_style
+from tasker.theme import CHROME, DONE_DOT, HOVER, LINE, PAPER, SELECTED, dock_style
 
 
 def test_geometry_is_right_third():
@@ -87,19 +87,25 @@ def test_add_search_done_and_color(qtbot, tmp_path, monkeypatch):
     qtbot.mouseClick(only, Qt.MouseButton.LeftButton)
     assert dock._detail.isVisible()
     assert store.get(only.item_id).state == before.state
-    dock._detail.importance.click()
+    dock._detail.set_status("urgent")
     item = store.get(only.item_id)
     assert item is not None and item.state == "urgent"
+    only = dock.list_layout.itemAt(0).widget()
     assert getattr(only, "done", None) is None
     assert only.findChild(QToolButton, "openDetail") is None
-    assert "border-radius:10px" in only.importance.styleSheet()
-    assert only.title.minimumHeight() >= 72
-    dock._detail.done.setChecked(True)
+    assert "border-radius:5px" in only.importance.styleSheet()
+    assert only.importance.size() == QSize(10, 10)
+    assert only.minimumHeight() == 40
+    assert only.is_selected()
+    assert SELECTED in only.styleSheet()
+    dock._detail.set_status("done")
     item = store.get(only.item_id)
     assert item is not None and item.state == "done"
     dock._detail.close_detail()
     only = dock.list_layout.itemAt(0).widget()
-    assert DONE_BG in only.styleSheet()
+    assert DONE_DOT in only.importance.styleSheet()
+    assert not only.is_selected()
+    assert HOVER in only.styleSheet()
     assert "line-through" not in only.styleSheet()
 
 
@@ -125,8 +131,8 @@ def test_dock_is_paper_not_white_plates(qtbot, tmp_path, monkeypatch):
 
     css = dock_style()
     assert "background:white" not in css.replace(" ", "")
-    assert PAPER in css
-    assert "border-radius:16px" in css
+    assert PAPER in css and CHROME in css
+    assert "border-radius:10px" in css
     dock = DockWindow(Store(tmp_path / "tasker.sqlite"))
     qtbot.addWidget(dock)
     assert dock.testAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
@@ -138,14 +144,14 @@ def test_dock_is_paper_not_white_plates(qtbot, tmp_path, monkeypatch):
     assert not dock.close_btn.icon().isNull()
     assert dock.close_btn.toolTip() == "隐藏到托盘"
     assert not dock.search.hasFrame()
-    assert dock.search.height() == 38
+    assert dock.search.height() == 34
     assert len(dock.search.actions()) == 1
     assert not dock.search.actions()[0].icon().isNull()
-    assert dock.search.palette().color(QPalette.ColorRole.Base).name() == "#fffaf2"
-    assert dock.search.palette().color(QPalette.ColorRole.PlaceholderText).name() == "#8a8176"
-    assert dock.add_btn.size() == QSize(36, 36)
-    assert dock.pin_btn.size() == QSize(36, 36)
-    assert dock.close_btn.size() == QSize(36, 36)
+    assert dock.search.palette().color(QPalette.ColorRole.Base).name() == "#fdfbf9"
+    assert dock.search.palette().color(QPalette.ColorRole.PlaceholderText).name() == "#6b655f"
+    assert dock.add_btn.size() == QSize(32, 32)
+    assert dock.pin_btn.size() == QSize(32, 32)
+    assert dock.close_btn.size() == QSize(32, 32)
     assert dock.search.styleSheet() == "" or "white" not in dock.styleSheet()
     assert PAPER in dock.styleSheet()
     assert dock.chrome.layout().itemAt(0).widget() is dock.search
@@ -482,7 +488,7 @@ def test_round_window_mask_clips_corners_on_full_rect():
 def test_paper_corner_radius_is_zero_when_flush_to_work_area():
     avail = QRect(0, 40, 1920, 1040)
     inset = QRect(200, 80, 1200, 800)
-    assert paper_corner_radius(inset, avail) == 16
+    assert paper_corner_radius(inset, avail) == 10
     assert paper_corner_radius(avail, avail) == 0
     assert paper_corner_radius(QRect(1, 41, 1918, 1038), avail) == 0
 
@@ -524,3 +530,48 @@ def test_fill_work_area_keeps_rail_and_stretches_detail(qtbot, tmp_path, monkeyp
     assert dock.detail_host.width() >= leftover - 8
     assert paper_corner_radius(dock.geometry(), avail) == 0
     assert dock.mask().isEmpty() or dock.mask().boundingRect().size() == dock.size()
+
+
+def test_open_detail_keeps_cards_and_marks_selection(qtbot, tmp_path, monkeypatch):
+    monkeypatch.setenv("TASKER_DATA_DIR", str(tmp_path))
+    from tasker.shell.window import DockWindow
+
+    store = Store(tmp_path / "tasker.sqlite")
+    first = store.save(replace(store.create(), title="一"))
+    second = store.save(replace(store.create(), title="二"))
+    dock = DockWindow(store)
+    qtbot.addWidget(dock)
+    dock.show()
+    before = dock.cards()
+    dock.open_detail(first.id)
+    assert dock.cards() == before
+    selected = [card.item_id for card in dock.cards() if card.is_selected()]
+    assert selected == [first.id]
+    dock.open_detail(second.id)
+    assert dock.cards() == before
+    selected = [card.item_id for card in dock.cards() if card.is_selected()]
+    assert selected == [second.id]
+    assert dock.notch.width() == 1
+    assert LINE in dock.notch.styleSheet()
+
+
+def test_card_status_menu_changes_state_and_syncs_detail(qtbot, tmp_path, monkeypatch):
+    monkeypatch.setenv("TASKER_DATA_DIR", str(tmp_path))
+    from tasker.shell.window import DockWindow
+
+    store = Store(tmp_path / "tasker.sqlite")
+    item = store.save(replace(store.create(), title="右键"))
+    dock = DockWindow(store)
+    qtbot.addWidget(dock)
+    dock.show()
+    dock.open_detail(item.id)
+    card = dock.cards()[0]
+    menu = card.status_menu()
+    assert [a.text() for a in menu.actions()] == ["普通", "紧急", "已完成"]
+    assert menu.actions()[0].isChecked()
+    assert menu.windowFlags() & Qt.WindowType.FramelessWindowHint
+    menu.actions()[2].trigger()
+    assert store.get(item.id).state == "done"
+    assert dock._detail.status_btn.text().startswith("已完成")
+    assert DONE_DOT in dock.cards()[0].importance.styleSheet()
+    assert dock.tray.contextMenu().objectName() == "trayMenu"

@@ -1,88 +1,90 @@
 ---
 name: Tasker
-description: A quiet sheet of working paper parked beside the desktop.
+description: A quiet sheet of working paper parked beside the desktop, styled after the Copilot App light theme.
 colors:
-  paper: "#f4efe6"
-  chrome: "#ebe4d8"
-  ink: "#1c1915"
-  muted-ink: "#8a8176"
-  cobalt: "#2563eb"
-  cobalt-hover: "#1d4ed8"
-  code-paper: "#fffaf2"
-  hairline: "#e4d9c7"
-  pending-paper: "#ecfdf3"
-  pending-line: "#bbf7d0"
-  urgent-paper: "#fef2f2"
-  urgent-line: "#fecaca"
-  done-paper: "#e5e7eb"
-  done-line: "#d1d5db"
-  pending-dot: "#22c55e"
-  urgent-dot: "#ef4444"
-  done-dot: "#9ca3af"
+  paper: "#f6f2ee"
+  chrome: "#f1ebe7"
+  hover: "#e9e2dd"
+  selected: "#e2dad5"
+  ink: "#1f1d1a"
+  muted-ink: "#6b655f"
+  cobalt: "#0969da"
+  cobalt-hover: "#0757b8"
+  code-paper: "#fdfbf9"
+  hairline: "#e6dfda"
+  hairline-strong: "#d6cec8"
+  pending-paper: "#dafbe1"
+  pending-line: "#aceebb"
+  urgent-paper: "#ffebe9"
+  urgent-line: "#ffcecb"
+  done-paper: "#eaeef2"
+  done-line: "#d0d7de"
+  pending-dot: "#1a7f37"
+  urgent-dot: "#cf222e"
+  done-dot: "#8c959f"
 typography:
   title:
-    fontFamily: "Candara, Calibri, Segoe UI, sans-serif"
-    fontSize: "16pt"
-    fontWeight: 400
-    lineHeight: 1.25
+    fontFamily: "Segoe UI Variable, Segoe UI, Microsoft YaHei UI, sans-serif"
+    fontSize: "20px"
+    fontWeight: 600
+    lineHeight: 1.3
   body:
-    fontFamily: "Candara, Calibri, Segoe UI, sans-serif"
-    fontSize: "16px"
-    fontWeight: 400
-    lineHeight: 1.72
-  card:
-    fontFamily: "Candara, Calibri, Segoe UI, sans-serif"
+    fontFamily: "Segoe UI Variable, Segoe UI, Microsoft YaHei UI, sans-serif"
     fontSize: "15px"
+    fontWeight: 400
+    lineHeight: 1.65
+  row:
+    fontFamily: "Segoe UI Variable, Segoe UI, Microsoft YaHei UI, sans-serif"
+    fontSize: "14px"
     fontWeight: 400
     lineHeight: 1.4
   stamp:
-    fontFamily: "Candara, Calibri, Segoe UI, sans-serif"
-    fontSize: "13px"
+    fontFamily: "Segoe UI Variable, Segoe UI, Microsoft YaHei UI, sans-serif"
+    fontSize: "12px"
     fontWeight: 600
-    lineHeight: 1.72
+    lineHeight: 1.65
 rounded:
-  search: "12px"
-  tool: "10px"
-  card: "8px"
-  shell: "16px"
+  search: "8px"
+  tool: "6px"
+  row: "6px"
+  pill: "13px"
+  shell: "10px"
 spacing:
-  xs: "4px"
-  sm: "8px"
-  control-gap: "10px"
-  surface: "12px"
-  shell: "16px"
+  xs: "2px"
+  sm: "4px"
+  row-gap: "2px"
+  surface: "8px"
+  header: "12px"
   content: "24px"
-  reading-edge: "28px"
-  reading-tail: "48px"
 components:
   search-field:
     backgroundColor: "{colors.code-paper}"
-    textColor: "{colors.ink}"
-    typography: "{typography.card}"
+    border: "1px {colors.hairline-strong}; hover {colors.muted-ink}; focus 2px {colors.cobalt}"
     rounded: "{rounded.search}"
-    padding: "0 12px"
-    height: "38px"
+    height: "34px"
   tool-button:
-    backgroundColor: "{colors.code-paper}"
-    textColor: "{colors.ink}"
+    backgroundColor: "transparent; hover {colors.hover}"
     rounded: "{rounded.tool}"
-    padding: "0"
-    size: "36px"
-  task-card:
-    backgroundColor: "{colors.pending-paper}"
-    textColor: "{colors.ink}"
-    typography: "{typography.card}"
-    rounded: "{rounded.card}"
-    padding: "12px 14px"
-    height: "88px"
+    size: "32px (16px icon)"
+  task-row:
+    backgroundColor: "transparent; hover {colors.hover}; selected {colors.selected}"
+    typography: "{typography.row}"
+    rounded: "{rounded.row}"
+    minHeight: "40px"
+    marker: "10px state dot"
+  status-pill:
+    backgroundColor: "state paper + state line"
+    rounded: "{rounded.pill}"
+    menu: "普通 / 紧急 / 已完成 (also on row right-click)"
   journal-body:
     backgroundColor: "{colors.paper}"
-    textColor: "{colors.ink}"
     typography: "{typography.body}"
-    padding: "8px 20px 32px 12px"
+    footer: "12px muted status line above a 1px hairline"
 ---
 
 # Design System: Tasker
+
+> 2026-10-10: tokens above follow the Copilot App light theme (spec `docs/superpowers/specs/2026-10-10-copilot-theme-detail-design.md`). Where prose below mentions earlier tinted cards or Candara, the frontmatter wins.
 
 ## Overview
 

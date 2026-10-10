@@ -11,33 +11,44 @@ from tasker import theme
 
 
 def test_theme_tokens_are_locked():
-    assert theme.PAPER == "#f4efe6"
-    assert theme.CHROME == "#ebe4d8"
-    assert theme.INK == "#1c1915"
-    assert theme.MUTED == "#8a8176"
-    assert theme.COBALT == "#2563eb"
-    assert theme.COBALT_HOVER == "#1d4ed8"
-    assert theme.CARD == "#fffaf2"
-    assert theme.LINE == "#e4d9c7"
-    assert theme.PENDING_BG == "#ecfdf3"
-    assert theme.PENDING_LINE == "#bbf7d0"
-    assert theme.URGENT_BG == "#fef2f2"
-    assert theme.URGENT_LINE == "#fecaca"
-    assert theme.DONE_BG == "#e5e7eb"
-    assert theme.DONE_LINE == "#d1d5db"
-    assert theme.PENDING_DOT == "#22c55e"
-    assert theme.URGENT_DOT == "#ef4444"
-    assert theme.DONE_DOT == "#9ca3af"
+    assert theme.PAPER == "#f6f2ee"
+    assert theme.CHROME == "#f1ebe7"
+    assert theme.HOVER == "#e9e2dd"
+    assert theme.SELECTED == "#e2dad5"
+    assert theme.INK == "#1f1d1a"
+    assert theme.MUTED == "#6b655f"
+    assert theme.COBALT == "#0969da"
+    assert theme.COBALT_HOVER == "#0757b8"
+    assert theme.CARD == "#fdfbf9"
+    assert theme.LINE == "#e6dfda"
+    assert theme.LINE_STRONG == "#d6cec8"
+    assert theme.PENDING_BG == "#dafbe1"
+    assert theme.PENDING_LINE == "#aceebb"
+    assert theme.URGENT_BG == "#ffebe9"
+    assert theme.URGENT_LINE == "#ffcecb"
+    assert theme.DONE_BG == "#eaeef2"
+    assert theme.DONE_LINE == "#d0d7de"
+    assert theme.PENDING_DOT == "#1a7f37"
+    assert theme.URGENT_DOT == "#cf222e"
+    assert theme.DONE_DOT == "#8c959f"
+    assert theme.UI_FAMILIES[0] == "Segoe UI"
     css = theme.dock_style()
-    assert "border-radius:16px" in css
-    assert "QLineEdit#search{background:transparent" in css
-    assert "border-radius:12px" in css
-    assert "QLineEdit#search:focus{border:none" in css
     assert "border-radius:10px" in css
+    assert "QLineEdit#search{background:transparent" in css
+    assert "border-radius:8px" in css
+    assert "QLineEdit#search:hover,QLineEdit#search:focus{border:none" in css
+    assert "border-radius:6px" in css
     assert "QToolButton#pinBtn:checked" in css
     assert "QToolButton#addBtn:pressed" in css
+    assert f"QToolButton#closeDock:hover{{background:{theme.HOVER}" in css
+    assert f"QWidget#rail{{background:{theme.CHROME}" in css
+    assert f"QWidget#detailHost{{background:{theme.PAPER}" in css
+    assert theme.COBALT not in css.split("QWidget#shell[bubble='true']")[1].split("}")[0]
     assert "text-decoration:none" in theme.card_style("pending")
     assert "line-through" not in theme.card_style("done")
+    assert theme.SELECTED in theme.card_style("pending", selected=True)
+    menu = theme.menu_style()
+    assert "border-radius:8px" in menu and theme.HOVER in menu
 
 
 def test_geometry_contract_locked():
