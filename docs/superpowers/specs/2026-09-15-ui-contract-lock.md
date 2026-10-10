@@ -1,7 +1,9 @@
 # Tasker UI contract (locked theme + interfaces)
 
 Date: 2026-09-15  
-Status: **Locked.** Layout polish is allowed. Theme tokens and the interfaces below are **not**.  
+> **2026-10-10 supersession:** §2 (theme tokens, radii, typeface, bubble outline, card fills) and the DetailWindow header list in §3.5 are replaced by the user-approved `2026-10-10-copilot-theme-detail-design.md`. Everything else here remains locked.
+
+Status: **Locked.** Layout polish is allowed. Theme tokens and the interfaces below are **not**.
 Progress ledger: `docs/STATUS.md`
 
 This is the snapshot of the shipping UI so someone else can refine spacing, type scale, or widget arrangement **without changing the product identity or the code that other modules call**.

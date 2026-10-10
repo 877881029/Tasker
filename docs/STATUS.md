@@ -1,9 +1,19 @@
 # Tasker 项目状态（AI 接手必读）
 
-最后更新：2026-09-23  
+最后更新：2026-10-10  
 Git：`main` 应与 `origin/main` 同步（https://github.com/877881029/Tasker ）。
 
 ## 当前目标
+
+**Copilot 主题与详情体验**（规格已批准，实现中）
+
+- 主题改为 Copilot App 浅色：侧栏/主区色阶 + 1px 分隔线、无边框任务行、幽灵图标按钮、蓝色焦点环、Segoe UI
+- 紧急度与完成合并为详情头部「状态胶囊 + 下拉菜单」，任务行右键同菜单；删除改为垃圾桶两步确认
+- 不加写入/保存/收起按钮，快捷键与数据格式不变；打开详情不再重建列表
+- 规格：`docs/superpowers/specs/2026-10-10-copilot-theme-detail-design.md`（替换旧合同 §2 主题锁）
+- 计划：`docs/superpowers/plans/2026-10-10-copilot-theme-detail.md`
+
+## 上一目标（已完成）
 
 **顶部工具栏表面精修**（已完成，冻结包已重建并部署）
 
