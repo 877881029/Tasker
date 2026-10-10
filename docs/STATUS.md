@@ -5,6 +5,17 @@ Git：`main` 应与 `origin/main` 同步（https://github.com/877881029/Tasker �
 
 ## 当前目标
 
+**窗口拖拽、缩放与屏幕自适应**（规格已批准，实现中）
+
+- 按窗口所在屏幕计算；屏幕/DPI/分辨率变化自动收回可见区
+- 展开详情不再被挤成 0 宽（整窗平移、详情最小 360）；收起回原位
+- 详情空白处可拖动；双击拖拽区铺满/还原；抗锯齿圆角替代锯齿遮罩
+- 分隔线可拖动调整列表宽度
+- 规格：`docs/superpowers/specs/2026-10-10-window-drag-resize-screen-design.md`
+- 计划：`docs/superpowers/plans/2026-10-10-window-drag-resize-screen.md`
+
+## 上一目标（已完成）
+
 **Copilot 主题与详情体验**（已完成，冻结包已重建并部署；双击桌面 Tasker 即可使用）
 
 - 主题改为 Copilot App 浅色：侧栏/主区色阶 + 1px 分隔线、无边框任务行、幽灵图标按钮、蓝色焦点环、Segoe UI
@@ -15,9 +26,9 @@ Git：`main` 应与 `origin/main` 同步（https://github.com/877881029/Tasker �
 - 中文字体统一：`install_font_fallback()` 将 Segoe UI 回退到 Microsoft YaHei UI，避免日/繁字形混排
 - Python 3.12 全量测试 `101 passed`；150% DPI 原生截图验收通过
 - 部署：`%LOCALAPPDATA%\Programs\Tasker\Tasker.exe`；桌面 `Tasker.lnk` 已覆盖
-- 实现提交：`ad463f2`
+- 实现提交：`ad463f2`、`5b7c9be`（快速切换不再透出桌面；置顶图标改图钉）
 
-## 上一目标（已完成）
+## 更早目标（已完成）
 
 **顶部工具栏表面精修**（已完成，冻结包已重建并部署）
 
