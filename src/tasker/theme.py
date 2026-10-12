@@ -137,3 +137,14 @@ def card_style(state: str, selected: bool = False) -> str:
         f"background:{background};border:none;border-radius:{ROW_RADIUS}px;"
         "text-decoration:none;"
     )
+
+def ddl_pill_style(tone: str) -> str:
+    background, border, color = CARD, LINE_STRONG, INK
+    if tone == "soon":
+        color = URGENT_DOT
+    elif tone == "overdue":
+        background, border, color = URGENT_BG, URGENT_LINE, URGENT_DOT
+    return (
+        f"background:{background};border:1px solid {border};border-radius:8px;"
+        f"color:{color};font-size:12px;font-weight:600;padding:1px 8px;"
+    )

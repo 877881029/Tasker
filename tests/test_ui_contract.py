@@ -70,6 +70,7 @@ def test_item_and_store_interface_locked():
         "created_at",
         "updated_at",
         "resume_state",
+        "deadline",
     }
     for name in (
         "create",
@@ -82,6 +83,7 @@ def test_item_and_store_interface_locked():
         "cycle_color",
         "set_done",
         "write_paste_png",
+        "set_deadline",
     ):
         assert callable(getattr(Store, name))
     assert list(signature(Store.list_visible).parameters) == ["self", "query"]

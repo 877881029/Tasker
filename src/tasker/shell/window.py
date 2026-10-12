@@ -3,8 +3,9 @@ from __future__ import annotations
 import ctypes
 import os
 from ctypes import wintypes
+from datetime import datetime
 
-from PySide6.QtCore import QDateTime, QEvent, QPoint, QRect, QRectF, QSize, Qt
+from PySide6.QtCore import QDateTime, QEvent, QPoint, QRect, QRectF, QSize, Qt, QTimer
 from PySide6.QtGui import (
     QColor,
     QGuiApplication,
@@ -30,6 +31,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from tasker.deadline import countdown_text, deadline_label
 from tasker.resources import resource_path
 from tasker.shell.detail import DetailWindow
 from tasker.shell.status import apply_status, build_status_menu, style_menu
@@ -48,6 +50,7 @@ from tasker.theme import (
     STATE_DOT,
     STATE_LABEL,
     card_style,
+    ddl_pill_style,
     dock_style,
     ui_font,
 )
@@ -410,6 +413,16 @@ class ItemCard(QWidget):
         dot_box.addStretch(1)
         layout.addLayout(dot_box)
         layout.addWidget(self.title, 1)
+        self.deadline_pill = QLabel()
+        self.deadline_pill.setObjectName("deadlinePill")
+        self.deadline_pill.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.deadline_pill.setAttribute(
+            Qt.WidgetAttribute.WA_TransparentForMouseEvents, True
+        )
+        self.deadline_pill.setFixedHeight(22)
+        self.deadline_pill.hide()
+        layout.addWidget(self.deadline_pill, 0, Qt.AlignmentFlag.AlignTop)
+        self._deadline = None
         self._selected = False
         self.apply_item(item)
 
@@ -478,6 +491,20 @@ class ItemCard(QWidget):
         self.setAccessibleDescription("按 Enter 或空格打开详情，菜单键或右键改状态")
         self.setToolTip(f"{state} · {name} · 右键改状态")
         self.importance.setAccessibleName(f"任务状态：{state}")
+        self._deadline = item.deadline if item.state == "urgent" else None
+        self.refresh_countdown()
+
+    def refresh_countdown(self, now: datetime | None = None) -> None:
+        if self._deadline is None:
+            self.deadline_pill.hide()
+            return
+        text, tone = countdown_text(self._deadline, now or datetime.now())
+        self.deadline_pill.setText(text)
+        self.deadline_pill.setStyleSheet(f"QLabel#deadlinePill{{{ddl_pill_style(tone)}}}")
+        self.deadline_pill.setToolTip(f"DDL {deadline_label(self._deadline)}")
+        self.deadline_pill.setAccessibleName(f"截止倒计时 {text}")
+        self.deadline_pill.setProperty("tone", tone)
+        self.deadline_pill.show()
 
 
 class ChromeBar(QWidget):
@@ -529,6 +556,10 @@ class DockWindow(QWidget):
         self._last_fill = 0
         self._placing = 0
         self._active_draft_id: str | None = None
+        self._countdown_timer = QTimer(self)
+        self._countdown_timer.setInterval(30_000)
+        self._countdown_timer.timeout.connect(self.refresh_countdowns)
+        self._countdown_timer.start()
         self.setWindowTitle("Tasker")
         self.setObjectName("dock")
         self.setWindowFlags(self._frame_flags(False))
@@ -1008,6 +1039,11 @@ class DockWindow(QWidget):
             if isinstance(widget, ItemCard):
                 found.append(widget)
         return found
+
+    def refresh_countdowns(self, now: datetime | None = None) -> None:
+        stamp = now or datetime.now()
+        for card in self.cards():
+            card.refresh_countdown(stamp)
 
     def _sync_selection(self) -> None:
         for card in self.cards():

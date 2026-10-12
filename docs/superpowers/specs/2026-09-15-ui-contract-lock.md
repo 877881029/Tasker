@@ -91,7 +91,7 @@ STATES = ("pending", "urgent", "done")
 
 @dataclass(frozen=True)
 class Item:
-    id, title, state, status_pin, body_md, created_at, updated_at, resume_state
+    id, title, state, status_pin, body_md, created_at, updated_at, resume_state, deadline  # deadline 由 2026-10-12 DDL 规格新增
 
 is_empty_note(item) -> bool
 is_blank_draft(item) -> bool
@@ -108,6 +108,7 @@ class Store:
     def cycle_color(self, item_id: str) -> Item   # pending ↔ urgent; done unchanged
     def set_done(self, item_id: str, done: bool) -> Item
     def write_paste_png(self, item_id: str, data: bytes) -> Path
+    def set_deadline(self, item_id: str, when: datetime | None) -> Item   # 2026-10-12 新增
 ```
 
 List order locked: urgent, then pending, then done; within a group newest `updated_at` first. Search casefolds title + body.

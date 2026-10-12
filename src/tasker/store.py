@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
+from datetime import datetime
 from pathlib import Path
 import json
 import sqlite3
@@ -35,6 +36,19 @@ class Item:
     created_at: float
     updated_at: float
     resume_state: str
+    deadline: datetime | None = None
+
+
+DEADLINE_FORMAT = "%Y-%m-%dT%H:%M"
+
+
+def _parse_deadline(raw: str | None) -> datetime | None:
+    if not raw:
+        return None
+    try:
+        return datetime.fromisoformat(raw.strip()).replace(second=0, microsecond=0)
+    except ValueError:
+        return None
 
 
 def _yaml_scalar(value: str) -> str:
@@ -78,7 +92,12 @@ def _render_task(item: Item) -> str:
         f"title: {_yaml_scalar(item.title)}\n"
         f"state: {item.state}\n"
         f"resume_state: {item.resume_state}\n"
-        f"created_at: {item.created_at}\n"
+        + (
+            f"deadline: {_yaml_scalar(item.deadline.strftime(DEADLINE_FORMAT))}\n"
+            if item.deadline is not None
+            else ""
+        )
+        + f"created_at: {item.created_at}\n"
         f"updated_at: {item.updated_at}\n"
         "---\n"
     )
@@ -160,6 +179,7 @@ class Store:
             created_at=created,
             updated_at=updated,
             resume_state=meta.get("resume_state") or state,
+            deadline=_parse_deadline(meta.get("deadline")),
         )
 
     def create(self) -> Item:
@@ -225,8 +245,28 @@ class Store:
                 if needle in item.title.casefold() or needle in item.body_md.casefold()
             ]
         rank = {"urgent": 0, "pending": 1, "done": 2}
-        items.sort(key=lambda i: (rank.get(i.state, 9), -i.updated_at))
+
+        def order(item: Item) -> tuple:
+            due = item.deadline if item.state == "urgent" else None
+            return (
+                rank.get(item.state, 9),
+                due is None,
+                due.timestamp() if due is not None else 0.0,
+                -item.updated_at,
+            )
+
+        items.sort(key=order)
         return items
+
+    def set_deadline(self, item_id: str, when: datetime | None) -> Item:
+        item = self.get(item_id)
+        if item is None:
+            raise KeyError(item_id)
+        if when is not None:
+            when = when.replace(second=0, microsecond=0)
+        if item.deadline == when:
+            return item
+        return self.save(replace(item, deadline=when))
 
     def cycle_color(self, item_id: str) -> Item:
         item = self.get(item_id)

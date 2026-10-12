@@ -24,6 +24,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from tasker.deadline import build_deadline_menu, deadline_label
 from tasker.journal import dump_journal, parse_journal, prepend_record
 from tasker.resources import resource_path
 from tasker.shell.journal_edit import JournalDocumentView, JournalEditor
@@ -35,6 +36,7 @@ from tasker.theme import (
     HOVER,
     INK,
     LINE,
+    LINE_STRONG,
     MUTED,
     PAPER,
     SELECTED,
@@ -198,6 +200,24 @@ class DetailWindow(QWidget):
         self.status_btn.setToolTip("改状态：普通 / 紧急 / 已完成")
         self.status_btn.setAccessibleDescription("打开菜单选择普通、紧急或已完成")
 
+        self._deadline: datetime | None = None
+        self.deadline_btn = QToolButton()
+        self.deadline_btn.setObjectName("deadlinePill")
+        self.deadline_btn.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+        self.deadline_btn.setFixedHeight(26)
+        self.deadline_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.deadline_btn.setToolTip("设置截止时间（仅紧急任务）")
+        self.deadline_btn.setAccessibleDescription("打开菜单选择或清除截止时间")
+        self.deadline_btn.setStyleSheet(
+            f"QToolButton#deadlinePill{{background:{CARD};color:{INK};"
+            f"border:1px solid {LINE_STRONG};border-radius:8px;padding:0 10px;"
+            "font-size:12px;font-weight:600;}"
+            f"QToolButton#deadlinePill:hover{{background:{HOVER};}}"
+            f"QToolButton#deadlinePill:focus{{border:2px solid {COBALT};}}"
+            "QToolButton#deadlinePill::menu-indicator{image:none;width:0;}"
+        )
+        self.deadline_btn.hide()
+
         self.title_edit = QLineEdit()
         self.title_edit.setObjectName("detailTitle")
         self.title_edit.setPlaceholderText("标题")
@@ -232,6 +252,7 @@ class DetailWindow(QWidget):
         bar.setContentsMargins(0, 0, 0, 0)
         bar.setSpacing(8)
         bar.addWidget(self.status_btn, 0, Qt.AlignmentFlag.AlignVCenter)
+        bar.addWidget(self.deadline_btn, 0, Qt.AlignmentFlag.AlignVCenter)
         bar.addWidget(self.title_edit, 1)
         bar.addWidget(self.delete_btn, 0, Qt.AlignmentFlag.AlignVCenter)
 
@@ -286,7 +307,17 @@ class DetailWindow(QWidget):
         if item.id != self._item_id:
             return
         self._state = item.state
+        self._deadline = item.deadline
         self._paint_status()
+        self._paint_deadline()
+
+    def set_deadline(self, when: datetime | None) -> None:
+        if not self._item_id:
+            return
+        item = self._store.set_deadline(self._item_id, when)
+        self._deadline = item.deadline
+        self._paint_deadline()
+        self.changed.emit(item.id)
 
     def set_status(self, state: str) -> None:
         if not self._item_id:
@@ -381,6 +412,26 @@ class DetailWindow(QWidget):
         self.status_btn.setMenu(build_status_menu(state, self.set_status, self))
         if old is not None:
             old.deleteLater()
+
+    def _paint_deadline(self) -> None:
+        if self._state != "urgent":
+            self.deadline_btn.hide()
+            return
+        if self._deadline is None:
+            text = "设置 DDL  ▾"
+            self.deadline_btn.setAccessibleName("截止时间：未设置")
+        else:
+            label = deadline_label(self._deadline)
+            text = f"DDL {label}  ▾"
+            self.deadline_btn.setAccessibleName(f"截止时间：{label}")
+        self.deadline_btn.setText(text)
+        old = self.deadline_btn.menu()
+        self.deadline_btn.setMenu(
+            build_deadline_menu(self._deadline, self.set_deadline, self)
+        )
+        if old is not None:
+            old.deleteLater()
+        self.deadline_btn.show()
 
     def closeEvent(self, event: QCloseEvent) -> None:
         if self._item_id:
