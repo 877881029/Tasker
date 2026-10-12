@@ -109,6 +109,8 @@ class Store:
     def set_done(self, item_id: str, done: bool) -> Item
     def write_paste_png(self, item_id: str, data: bytes) -> Path
     def set_deadline(self, item_id: str, when: datetime | None) -> Item   # 2026-10-12 新增
+    def read_raw(self, item_id: str) -> str | None                      # 2026-10-12 便捷包：撤销删除
+    def restore_raw(self, item_id: str, raw: str) -> Item | None
 ```
 
 List order locked: urgent, then pending, then done; within a group newest `updated_at` first. Search casefolds title + body.
@@ -118,7 +120,7 @@ List order locked: urgent, then pending, then done; within a group newest `updat
 **`DockWindow`**
 
 - Flags: `Qt.Tool | FramelessWindowHint` (+ `WindowStaysOnTopHint` when pinned). No taskbar app button.
-- Tray: `QSystemTrayIcon`; Trigger/DoubleClick or menu 「显示」 → `show_from_tray`; 「退出」 quits. Dock × **hides** (process stays).
+- Tray: `QSystemTrayIcon`; Trigger/DoubleClick or menu 「显示」 → `show_from_tray`; 「退出」 quits. Dock × **hides** (process stays). 2026-10-12 便捷包新增菜单：快速记录、复制本周周报、开机自启；超期角标；详情未打开时 Esc 隐藏到托盘（钉住时不隐藏）。
 - Chrome left-to-right: search (stretch), `+`, pin, ×. No 「事项」 label.
 - `+` → `ensure_draft` then `open_detail`. Card click → `open_detail`. Search filters `list_visible`.
 - Public: `refresh()`, `open_detail(item_id: str)`, `show_from_tray()`, `tray`.
@@ -161,7 +163,7 @@ List order locked: urgent, then pending, then done; within a group newest `updat
 
 Collapsed: only `rail`, **first launch** right third (`geometry_for_screen`). Expanded: parked rail stays put; the window grows left by extra width (first time `2 × rail`, then remembered). The user may then resize to the full work area; extra pixels stay in `detailHost`. Shell radius 16px with a matching HWND mask on the full window rect, or radius 0 and no mask when flush to `availableGeometry()`. Cobalt 2px bubble border, selected card cobalt 2px. Empty paper drags the shell; 8-edge / corner resize (~8px), including over the search box edge (`WM_NCHITTEST`).
 
-Cards: solid 20px state dot + wrapping title only (no inline 详情 / 完成).
+Cards: solid state dot + wrapping title (no inline 详情 / 完成); 2026-10-12 起允许：DDL 倒计时胶囊、最新日志摘要行、底部「已完成 (N)」折叠行；删除为一次点击 + 5 秒撤销。
 
 ---
 

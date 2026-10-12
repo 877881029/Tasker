@@ -6,9 +6,10 @@ Git：`main` 应与 `origin/main` 同步（https://github.com/877881029/Tasker �
 
 ## 当前目标
 
-**便捷功能包 10 项**（实现中）
+**便捷功能包 10 项 + Esc 收托盘**（已完成 2026-10-12，`91d5610`，149 测试通过，已部署：双击桌面 Tasker）
 
-- DDL 提醒与托盘角标、全局快捷键快速记录、列表右键设 DDL、删除可撤销、已完成折叠、键盘全流程、搜索关键词、复制本周周报、开机自启、最新日志摘要
+- DDL 提醒与托盘角标、全局快捷键快速记录、列表右键设 DDL、删除可撤销、已完成折叠、键盘全流程、搜索关键词、复制本周周报、开机自启、最新日志摘要；详情未打开时 Esc 隐藏到托盘（钉住则常驻）
+- 全局快捷键优先 Win+Alt+T，本机被系统占用，自动回退 Ctrl+Alt+T（托盘菜单显示实际组合）
 - 规格：`docs/superpowers/specs/2026-10-12-convenience-pack-design.md`
 - 计划：`docs/superpowers/plans/2026-10-12-convenience-pack.md`
 
