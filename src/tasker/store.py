@@ -41,6 +41,26 @@ class Item:
 
 DEADLINE_FORMAT = "%Y-%m-%dT%H:%M"
 
+SEARCH_KEYWORDS = ("紧急", "普通", "已完成", "完成", "超期", "今天", "ddl")
+
+
+def matches_keyword(item: Item, needle: str, now: datetime) -> bool:
+    if needle == "紧急":
+        return item.state == "urgent"
+    if needle == "普通":
+        return item.state == "pending"
+    if needle in {"已完成", "完成"}:
+        return item.state == "done"
+    if item.state != "urgent" or item.deadline is None:
+        return False
+    if needle == "超期":
+        return item.deadline <= now
+    if needle == "今天":
+        return item.deadline.date() == now.date()
+    if needle == "ddl":
+        return True
+    return False
+
 
 def _parse_deadline(raw: str | None) -> datetime | None:
     if not raw:
@@ -202,6 +222,17 @@ class Store:
         if path.exists():
             path.unlink()
 
+    def read_raw(self, item_id: str) -> str | None:
+        path = self._path_for(item_id)
+        if not path.is_file():
+            return None
+        return path.read_text(encoding="utf-8")
+
+    def restore_raw(self, item_id: str, raw: str) -> Item | None:
+        path = self._path_for(item_id)
+        path.write_text(raw, encoding="utf-8")
+        return self._read(path)
+
     def collapse_blank_drafts(self) -> Item | None:
         empties = [item for item in self.list_visible() if is_empty_note(item)]
         if not empties:
@@ -239,10 +270,13 @@ class Store:
         ]
         needle = query.strip().casefold()
         if needle:
+            now = datetime.now()
             items = [
                 item
                 for item in items
-                if needle in item.title.casefold() or needle in item.body_md.casefold()
+                if needle in item.title.casefold()
+                or needle in item.body_md.casefold()
+                or matches_keyword(item, needle, now)
             ]
         rank = {"urgent": 0, "pending": 1, "done": 2}
 

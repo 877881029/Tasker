@@ -24,6 +24,11 @@ class TaskerApp:
         self.qapp = qapp
         self.store = Store(data_dir())
         self.dock = DockWindow(self.store)
+        from tasker.shell.hotkey import GlobalHotkey
+
+        self.hotkey = GlobalHotkey(self.dock.quick_capture)
+        self.dock.set_hotkey_label(self.hotkey.register())
+        qapp.aboutToQuit.connect(self.hotkey.unregister)
 
     def show_dock(self) -> None:
         self.dock.show()

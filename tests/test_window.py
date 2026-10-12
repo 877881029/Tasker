@@ -130,7 +130,8 @@ def test_add_search_done_and_color(qtbot, tmp_path, monkeypatch):
     item = store.get(only.item_id)
     assert item is not None and item.state == "done"
     dock._detail.close_detail()
-    only = dock.list_layout.itemAt(0).widget()
+    dock.done_toggle().click()
+    only = dock.cards()[0]
     assert DONE_DOT in only.importance.styleSheet()
     assert not only.is_selected()
     assert HOVER in only.styleSheet()
@@ -307,9 +308,6 @@ def test_title_click_opens_detail_and_delete_removes_item(qtbot, tmp_path, monke
     assert dock._detail is not None
     assert dock._detail.isVisible()
     assert dock._detail.delete_btn.text() == "删除"
-    dock._detail.delete_btn.click()
-    assert store.get(item.id) is not None
-    assert dock._detail.delete_btn.text() == "确认删除"
     dock._detail.delete_btn.click()
     assert store.get(item.id) is None
     assert not dock._detail.isVisible()

@@ -8,17 +8,22 @@ from datetime import datetime
 from PySide6.QtCore import QDateTime, QEvent, QPoint, QRect, QRectF, QSize, Qt, QTimer
 from PySide6.QtGui import (
     QColor,
+    QFont,
     QGuiApplication,
     QIcon,
     QKeyEvent,
+    QKeySequence,
     QMouseEvent,
     QPainter,
     QPainterPath,
     QPalette,
     QPen,
+    QPixmap,
+    QShortcut,
 )
 from PySide6.QtWidgets import (
     QApplication,
+    QFrame,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -31,9 +36,13 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from tasker.deadline import countdown_text, deadline_label
+from tasker.deadline import build_deadline_menu, countdown_text, deadline_label
+from tasker.reminders import ReminderTracker, badge_text, overdue_count
+from tasker.report import summary_line, weekly_report
 from tasker.resources import resource_path
+from tasker.shell import autostart
 from tasker.shell.detail import DetailWindow
+from tasker.shell.quick_capture import QuickCapture
 from tasker.shell.status import apply_status, build_status_menu, style_menu
 from tasker.store import Item, Store
 from tasker.theme import (
@@ -46,14 +55,19 @@ from tasker.theme import (
     LINE_STRONG,
     MUTED,
     PAPER,
+    SELECTED,
     SHELL_RADIUS,
     STATE_DOT,
     STATE_LABEL,
+    URGENT_DOT,
     card_style,
     ddl_pill_style,
     dock_style,
     ui_font,
 )
+
+SEARCH_TIP = "搜索标题和日志；也可输入：紧急、普通、已完成、超期、今天、DDL"
+UNDO_MS = 5000
 
 
 def geometry_for_screen(avail: QRect) -> QRect:
@@ -293,10 +307,18 @@ class SearchLineEdit(QLineEdit):
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
+        self.on_down = None
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         palette = self.palette()
         palette.setColor(QPalette.ColorRole.Base, QColor(CARD))
         self.setPalette(palette)
+
+    def keyPressEvent(self, event: QKeyEvent) -> None:
+        if event.key() == Qt.Key.Key_Down and self.on_down is not None:
+            self.on_down()
+            event.accept()
+            return
+        super().keyPressEvent(event)
 
     def paintEvent(self, event) -> None:
         painter = QPainter(self)
@@ -371,6 +393,88 @@ def _lparam_to_local(window: QWidget, x: int, y: int) -> QPoint:
     return QPoint(round(point.x / dpr), round(point.y / dpr))
 
 
+class ElidedLabel(QLabel):
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self._full = ""
+        self.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Fixed)
+
+    def fullText(self) -> str:
+        return self._full
+
+    def setFullText(self, text: str) -> None:
+        self._full = text
+        self.setToolTip(text)
+        self._elide()
+
+    def resizeEvent(self, event) -> None:
+        super().resizeEvent(event)
+        self._elide()
+
+    def _elide(self) -> None:
+        width = max(0, self.width())
+        metrics = self.fontMetrics()
+        shown = metrics.elidedText(self._full, Qt.TextElideMode.ElideRight, width) if width else self._full
+        super().setText(shown)
+
+    def minimumSizeHint(self) -> QSize:
+        return QSize(0, super().minimumSizeHint().height())
+
+
+class ToastBar(QFrame):
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.setObjectName("toast")
+        self.setStyleSheet(
+            f"QFrame#toast{{background:{CARD};border:1px solid {LINE_STRONG};"
+            "border-radius:8px;}"
+            f"QLabel#toastText{{color:{INK};font-size:13px;background:transparent;border:none;}}"
+            f"QToolButton#toastAction{{color:{COBALT};font-size:13px;font-weight:600;"
+            "background:transparent;border:none;border-radius:6px;padding:2px 8px;}"
+            f"QToolButton#toastAction:hover{{background:{HOVER};}}"
+            f"QToolButton#toastAction:focus{{border:2px solid {COBALT};}}"
+        )
+        row = QHBoxLayout(self)
+        row.setContentsMargins(12, 6, 6, 6)
+        row.setSpacing(8)
+        self.text = ElidedLabel()
+        self.text.setObjectName("toastText")
+        self.action = QToolButton()
+        self.action.setObjectName("toastAction")
+        self.action.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.action.clicked.connect(self._run_action)
+        row.addWidget(self.text, 1)
+        row.addWidget(self.action)
+        self._callback = None
+        self._timer = QTimer(self)
+        self._timer.setSingleShot(True)
+        self._timer.timeout.connect(self.dismiss)
+        self.hide()
+
+    def show_message(self, text: str, action: str = "", callback=None, ms: int = UNDO_MS) -> None:
+        self.text.setFullText(text)
+        self.action.setText(action)
+        self.action.setVisible(bool(action))
+        self.action.setAccessibleName(action)
+        self._callback = callback
+        self.show()
+        self._timer.start(ms)
+
+    def dismiss(self) -> None:
+        self._timer.stop()
+        self._callback = None
+        self.hide()
+
+    def has_action(self) -> bool:
+        return self.isVisibleTo(self.parentWidget()) and self._callback is not None
+
+    def _run_action(self) -> None:
+        callback = self._callback
+        if callback is not None:
+            callback()
+        self.dismiss()
+
+
 class ItemCard(QWidget):
     DOT = 10
 
@@ -412,7 +516,18 @@ class ItemCard(QWidget):
         dot_box.addWidget(self.importance)
         dot_box.addStretch(1)
         layout.addLayout(dot_box)
-        layout.addWidget(self.title, 1)
+        self.summary = ElidedLabel()
+        self.summary.setObjectName("summaryLine")
+        self.summary.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.summary.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
+        self.summary.setStyleSheet(f"color:{MUTED};font-size:12px;")
+        self.summary.hide()
+        text_box = QVBoxLayout()
+        text_box.setContentsMargins(0, 0, 0, 0)
+        text_box.setSpacing(2)
+        text_box.addWidget(self.title)
+        text_box.addWidget(self.summary)
+        layout.addLayout(text_box, 1)
         self.deadline_pill = QLabel()
         self.deadline_pill.setObjectName("deadlinePill")
         self.deadline_pill.setFocusPolicy(Qt.FocusPolicy.NoFocus)
@@ -424,6 +539,8 @@ class ItemCard(QWidget):
         layout.addWidget(self.deadline_pill, 0, Qt.AlignmentFlag.AlignTop)
         self._deadline = None
         self._selected = False
+        self.on_nav = None
+        self.on_delete = None
         self.apply_item(item)
 
     def is_selected(self) -> bool:
@@ -451,10 +568,33 @@ class ItemCard(QWidget):
             self._show_status_menu(QPoint(12, self.height() // 2))
             event.accept()
             return
+        if event.key() in {Qt.Key.Key_Up, Qt.Key.Key_Down} and self.on_nav is not None:
+            self.on_nav(self, -1 if event.key() == Qt.Key.Key_Up else 1)
+            event.accept()
+            return
+        if event.key() == Qt.Key.Key_Delete and self.on_delete is not None:
+            self.on_delete(self.item_id)
+            event.accept()
+            return
         super().keyPressEvent(event)
 
     def status_menu(self) -> QMenu:
-        return build_status_menu(self._state, self._pick_status, self)
+        menu = build_status_menu(self._state, self._pick_status, self)
+        if self._state == "urgent":
+            menu.addSeparator()
+            item = self._store.get(self.item_id)
+            current = item.deadline if item is not None else None
+            sub = build_deadline_menu(current, self._pick_deadline, menu)
+            sub.setTitle("DDL")
+            sub.menuAction().setObjectName("deadlineSubmenu")
+            menu.addMenu(sub)
+        return menu
+
+    def _pick_deadline(self, when) -> None:
+        item = self._store.set_deadline(self.item_id, when)
+        self.apply_item(item)
+        if self._on_status is not None:
+            self._on_status(self.item_id)
 
     def _show_status_menu(self, pos: QPoint) -> None:
         self.status_menu().exec(self.mapToGlobal(pos))
@@ -491,6 +631,9 @@ class ItemCard(QWidget):
         self.setAccessibleDescription("按 Enter 或空格打开详情，菜单键或右键改状态")
         self.setToolTip(f"{state} · {name} · 右键改状态")
         self.importance.setAccessibleName(f"任务状态：{state}")
+        line = summary_line(item.status_pin)
+        self.summary.setFullText(line)
+        self.summary.setVisible(bool(line))
         self._deadline = item.deadline if item.state == "urgent" else None
         self.refresh_countdown()
 
@@ -556,6 +699,13 @@ class DockWindow(QWidget):
         self._last_fill = 0
         self._placing = 0
         self._active_draft_id: str | None = None
+        self._done_expanded = False
+        self._undo: tuple[str, str] | None = None
+        self._reminders = ReminderTracker()
+        self._reminder_item: str | None = None
+        self._quick: QuickCapture | None = None
+        self.hotkey_label = ""
+        self._badge = ""
         self._countdown_timer = QTimer(self)
         self._countdown_timer.setInterval(30_000)
         self._countdown_timer.timeout.connect(self.refresh_countdowns)
@@ -578,7 +728,9 @@ class DockWindow(QWidget):
         self.search = SearchLineEdit()
         self.search.setObjectName("search")
         self.search.setFrame(False)
-        self.search.setPlaceholderText("查找…")
+        self.search.setPlaceholderText("查找任务或日志…")
+        self.search.setToolTip(SEARCH_TIP)
+        self.search.on_down = self._focus_first_card
         self.search.setAccessibleName("搜索事项")
         self.search.setFixedHeight(34)
         search_icon = resource_path("assets", "icons", "search.svg")
@@ -675,6 +827,11 @@ class DockWindow(QWidget):
         rail_layout.setSpacing(0)
         rail_layout.addWidget(self.chrome)
         rail_layout.addWidget(scroll, 1)
+        self.toast = ToastBar()
+        toast_box = QHBoxLayout()
+        toast_box.setContentsMargins(10, 4, 10, 10)
+        toast_box.addWidget(self.toast)
+        rail_layout.addLayout(toast_box)
 
         self.detail_host = QWidget()
         self.detail_host.setObjectName("detailHost")
@@ -704,6 +861,8 @@ class DockWindow(QWidget):
         self.refresh()
         self._icon_path = resource_path("assets", "icons", "tasker.ico")
         self._setup_tray()
+        self._setup_shortcuts()
+        self._check_reminders()
         self._arm_frame()
         self._watch_screens()
 
@@ -715,19 +874,160 @@ class DockWindow(QWidget):
 
     def _setup_tray(self) -> None:
         self.tray = QSystemTrayIcon(self)
-        if self._icon_path.exists():
-            self.tray.setIcon(QIcon(str(self._icon_path)))
+        self._base_icon = QIcon(str(self._icon_path)) if self._icon_path.exists() else QIcon()
+        self.tray.setIcon(self._base_icon)
         self.tray.setToolTip("Tasker")
         menu = style_menu(QMenu())
         menu.setObjectName("trayMenu")
         show_action = menu.addAction("显示")
         show_action.triggered.connect(self.show_from_tray)
+        self.capture_action = menu.addAction("快速记录")
+        self.capture_action.triggered.connect(self.quick_capture)
+        self.report_action = menu.addAction("复制本周周报")
+        self.report_action.triggered.connect(self.copy_weekly_report)
+        menu.addSeparator()
+        self.autostart_action = menu.addAction("开机自启")
+        self.autostart_action.setCheckable(True)
+        self.autostart_action.toggled.connect(self._toggle_autostart)
+        menu.aboutToShow.connect(self._sync_autostart)
+        menu.addSeparator()
         quit_action = menu.addAction("退出")
         quit_action.triggered.connect(self._quit_app)
         self.tray.setContextMenu(menu)
         self.tray.activated.connect(self._tray_activated)
+        self.tray.messageClicked.connect(self._on_message_clicked)
         if QSystemTrayIcon.isSystemTrayAvailable():
             self.tray.show()
+
+    def _setup_shortcuts(self) -> None:
+        bindings = (
+            ("Ctrl+N", self._add),
+            ("Ctrl+F", self.focus_search),
+            ("Ctrl+Z", self.undo_delete),
+            ("Ctrl+Shift+C", self.copy_weekly_report),
+        )
+        self._shortcuts = []
+        for keys, slot in bindings:
+            shortcut = QShortcut(QKeySequence(keys), self)
+            shortcut.activated.connect(slot)
+            self._shortcuts.append(shortcut)
+
+    def keyPressEvent(self, event: QKeyEvent) -> None:
+        if event.key() == Qt.Key.Key_Escape and not self.detail_host.isVisible():
+            self.escape()
+            event.accept()
+            return
+        super().keyPressEvent(event)
+
+    def escape(self) -> None:
+        if self.search.text():
+            self.search.clear()
+            self.search.setFocus()
+            return
+        if self.pin_btn.isChecked():
+            return
+        self._close_dock()
+
+    def focus_search(self) -> None:
+        self.show_from_tray()
+        self.search.setFocus(Qt.FocusReason.ShortcutFocusReason)
+        self.search.selectAll()
+
+    def set_hotkey_label(self, label: str) -> None:
+        self.hotkey_label = label
+        self.capture_action.setText(f"快速记录（{label}）" if label else "快速记录")
+
+    def quick_capture(self) -> None:
+        if self._quick is None:
+            self._quick = QuickCapture(self._create_quick)
+        self._quick.popup()
+
+    def _create_quick(self, title: str, urgent: bool) -> None:
+        from dataclasses import replace as _replace
+
+        draft = self._store.create()
+        state = "urgent" if urgent else "pending"
+        item = self._store.save(_replace(draft, title=title, state=state, resume_state=state))
+        self.refresh()
+        self._notify("已记录", f"{STATE_LABEL[state]} · {item.title}")
+
+    def _notify(self, title: str, body: str) -> None:
+        if self.isVisible():
+            self.toast.show_message(f"{title}：{body}", ms=2500)
+        elif QSystemTrayIcon.isSystemTrayAvailable():
+            self.tray.showMessage(title, body, QSystemTrayIcon.MessageIcon.Information, 3000)
+
+    def copy_weekly_report(self) -> None:
+        text, count = weekly_report(self._store.list_visible(""))
+        QGuiApplication.clipboard().setText(text)
+        self._notify("已复制本周周报", f"{count} 个任务")
+
+    def _sync_autostart(self) -> None:
+        self.autostart_action.blockSignals(True)
+        self.autostart_action.setChecked(autostart.is_enabled())
+        self.autostart_action.blockSignals(False)
+
+    def _toggle_autostart(self, enabled: bool) -> None:
+        ok = autostart.set_enabled(enabled)
+        if not ok:
+            self._sync_autostart()
+
+    def _check_reminders(self) -> None:
+        if getattr(self, "tray", None) is None:
+            return
+        now = datetime.now()
+        items = self._store.list_visible("")
+        for reminder in self._reminders.check(items, now):
+            if reminder.item_id is not None:
+                self._reminder_item = reminder.item_id
+            elif reminder.kind == "summary":
+                self._reminder_item = None
+            if QSystemTrayIcon.isSystemTrayAvailable():
+                icon = (
+                    QSystemTrayIcon.MessageIcon.Warning
+                    if reminder.kind != "soon"
+                    else QSystemTrayIcon.MessageIcon.Information
+                )
+                self.tray.showMessage(reminder.title, reminder.body, icon, 8000)
+        self._update_badge(overdue_count(items, now))
+
+    def _update_badge(self, count: int) -> None:
+        text = badge_text(count)
+        self.tray.setToolTip(f"Tasker · {count} 个任务已超期" if count else "Tasker")
+        if text == self._badge:
+            return
+        self._badge = text
+        self.tray.setIcon(self._badge_icon(text) if text else self._base_icon)
+
+    def badge(self) -> str:
+        return self._badge
+
+    def _badge_icon(self, text: str) -> QIcon:
+        size = 64
+        pixmap = self._base_icon.pixmap(size, size)
+        if pixmap.isNull():
+            pixmap = QPixmap(size, size)
+            pixmap.fill(QColor(COBALT))
+        painter = QPainter(pixmap)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        diameter = 38
+        rect = QRect(size - diameter, size - diameter, diameter, diameter)
+        painter.setPen(QPen(QColor(CARD), 3))
+        painter.setBrush(QColor(URGENT_DOT))
+        painter.drawEllipse(rect.adjusted(1, 1, -1, -1))
+        font = QFont(ui_font(10))
+        font.setPixelSize(22 if len(text) == 1 else 17)
+        font.setBold(True)
+        painter.setFont(font)
+        painter.setPen(QColor("#ffffff"))
+        painter.drawText(rect, Qt.AlignmentFlag.AlignCenter, text)
+        painter.end()
+        return QIcon(pixmap)
+
+    def _on_message_clicked(self) -> None:
+        self.show_from_tray()
+        if self._reminder_item and self._store.get(self._reminder_item) is not None:
+            self.open_detail(self._reminder_item)
 
     def show_from_tray(self) -> None:
         self.show()
@@ -1031,6 +1331,7 @@ class DockWindow(QWidget):
         offset = bar.value()
         self._rebuild_list()
         bar.setValue(offset)
+        self._check_reminders()
 
     def cards(self) -> list[ItemCard]:
         found: list[ItemCard] = []
@@ -1044,6 +1345,7 @@ class DockWindow(QWidget):
         stamp = now or datetime.now()
         for card in self.cards():
             card.refresh_countdown(stamp)
+        self._check_reminders()
 
     def _sync_selection(self) -> None:
         for card in self.cards():
@@ -1084,13 +1386,125 @@ class DockWindow(QWidget):
             self._arm_frame()
             return
         previous: QWidget = self.close_btn
-        for item in items:
-            card = ItemCard(self._store, item, self.open_detail, self._on_card_status)
-            card.set_selected(item.id == self._open_item_id)
-            self.list_layout.addWidget(card)
-            QWidget.setTabOrder(previous, card)
-            previous = card
+        active = [item for item in items if item.state != "done"]
+        done = [item for item in items if item.state == "done"]
+        show_done = (
+            self._done_expanded
+            or bool(query.strip())
+            or any(item.id == self._open_item_id for item in done)
+        )
+        for item in active:
+            previous = self._add_card(item, previous)
+        if done:
+            toggle = QToolButton()
+            toggle.setObjectName("doneToggle")
+            toggle.setText(f"已完成 ({len(done)})  {'▾' if show_done else '▸'}")
+            toggle.setAccessibleName(f"已完成 {len(done)} 项，{'收起' if show_done else '展开'}")
+            toggle.setCursor(Qt.CursorShape.PointingHandCursor)
+            toggle.setStyleSheet(
+                f"QToolButton#doneToggle{{background:transparent;color:{MUTED};border:none;"
+                "border-radius:6px;padding:6px 10px;font-size:12px;font-weight:600;"
+                "text-align:left;}"
+                f"QToolButton#doneToggle:hover{{background:{HOVER};color:{INK};}}"
+                f"QToolButton#doneToggle:focus{{border:2px solid {COBALT};}}"
+            )
+            toggle.clicked.connect(self._toggle_done)
+            self.list_layout.addWidget(toggle)
+            QWidget.setTabOrder(previous, toggle)
+            previous = toggle
+            if show_done:
+                for item in done:
+                    previous = self._add_card(item, previous)
         self._arm_frame()
+
+    def _add_card(self, item: Item, previous: QWidget) -> QWidget:
+        card = ItemCard(self._store, item, self.open_detail, self._on_card_status)
+        card.on_nav = self._card_nav
+        card.on_delete = self.delete_item
+        card.set_selected(item.id == self._open_item_id)
+        self.list_layout.addWidget(card)
+        QWidget.setTabOrder(previous, card)
+        return card
+
+    def done_toggle(self) -> QToolButton | None:
+        return self.list_host.findChild(QToolButton, "doneToggle")
+
+    def _toggle_done(self) -> None:
+        self._done_expanded = not self._done_expanded
+        self.refresh()
+        toggle = self.done_toggle()
+        if toggle is not None:
+            toggle.setFocus()
+
+    def _focus_first_card(self) -> None:
+        cards = self.cards()
+        if cards:
+            cards[0].setFocus(Qt.FocusReason.TabFocusReason)
+            self.list_scroll.ensureWidgetVisible(cards[0])
+
+    def _card_nav(self, card: ItemCard, delta: int) -> None:
+        cards = self.cards()
+        if card not in cards:
+            return
+        index = cards.index(card) + delta
+        if index < 0:
+            self.search.setFocus(Qt.FocusReason.BacktabFocusReason)
+            return
+        if index >= len(cards):
+            return
+        cards[index].setFocus(Qt.FocusReason.TabFocusReason)
+        self.list_scroll.ensureWidgetVisible(cards[index])
+
+    def delete_item(self, item_id: str) -> None:
+        if (
+            self._detail is not None
+            and self._detail.isVisible()
+            and self._open_item_id == item_id
+        ):
+            self._detail.delete_item()
+            return
+        item = self._store.get(item_id)
+        if item is None:
+            return
+        cards = self.cards()
+        ids = [card.item_id for card in cards]
+        next_id = None
+        if item_id in ids:
+            index = ids.index(item_id)
+            rest = ids[index + 1 :] or ids[:index][-1:]
+            next_id = rest[0] if rest else None
+        raw = self._store.read_raw(item_id) or ""
+        self._store.delete(item_id)
+        self.refresh()
+        self._offer_undo(item_id, raw, item.title.strip())
+        for card in self.cards():
+            if card.item_id == next_id:
+                card.setFocus()
+                break
+
+    def _on_detail_deleted(self, item_id: str, raw: str, title: str) -> None:
+        self._offer_undo(item_id, raw, title)
+
+    def _offer_undo(self, item_id: str, raw: str, title: str) -> None:
+        if not raw:
+            return
+        self._undo = (item_id, raw)
+        name = title or "无标题"
+        self.toast.show_message(f"已删除「{name}」", "撤销", self.undo_delete)
+
+    def undo_delete(self) -> None:
+        if self._undo is None or not self.toast.isVisibleTo(self.rail):
+            return
+        item_id, raw = self._undo
+        self._undo = None
+        self.toast.dismiss()
+        self._store.restore_raw(item_id, raw)
+        self.refresh()
+        for card in self.cards():
+            if card.item_id == item_id:
+                card.setFocus()
+                self.list_scroll.ensureWidgetVisible(card)
+                break
 
     def open_detail(self, item_id: str) -> None:
         item = self._store.get(item_id)
@@ -1111,6 +1525,7 @@ class DockWindow(QWidget):
             self._detail_box.addWidget(self._detail, 1)
             self._detail.closed.connect(self._on_detail_closed)
             self._detail.changed.connect(self._on_item_changed)
+            self._detail.deleted.connect(self._on_detail_deleted)
         self._detail.load(item)
         self.detail_host.setMaximumWidth(16777215)
         self.notch.show()

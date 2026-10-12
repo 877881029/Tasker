@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from PySide6.QtCore import QRect, QSize, Qt, QTimer, Signal
+from PySide6.QtCore import QRect, QSize, Qt, Signal
 from PySide6.QtGui import (
     QCloseEvent,
     QColor,
@@ -43,9 +43,6 @@ from tasker.theme import (
     STATE_DOT,
     STATE_LABEL,
     STATE_PILL,
-    URGENT_BG,
-    URGENT_DOT,
-    URGENT_LINE,
     ui_font,
 )
 
@@ -163,7 +160,7 @@ def _dot_icon(color: str, size: int = 8) -> QIcon:
 class DetailWindow(QWidget):
     closed = Signal()
     changed = Signal(str)
-    DELETE_CONFIRM_MS = 4000
+    deleted = Signal(str, str, str)
     _READ_STATUS = "Ctrl+I 写入 · Ctrl+S 保存 · Esc 收起"
     _WRITE_STATUS = "正在写入 · Ctrl+S 保存 · Esc 保存并收起"
     _SAVED_STATUS = "已保存 {time} · Ctrl+I 继续写入 · Esc 收起"
@@ -241,11 +238,7 @@ class DetailWindow(QWidget):
         self.delete_btn.setIconSize(QSize(16, 16))
         self.delete_btn.setFixedHeight(32)
         self.delete_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        self._delete_armed = False
-        self._delete_timer = QTimer(self)
-        self._delete_timer.setSingleShot(True)
-        self._delete_timer.timeout.connect(self._reset_delete_confirmation)
-        self._reset_delete_confirmation()
+        self._paint_delete_btn()
         self.delete_btn.clicked.connect(self.delete_item)
 
         bar = QHBoxLayout()
@@ -293,7 +286,6 @@ class DetailWindow(QWidget):
         QShortcut(QKeySequence("Esc"), self, activated=self.close_detail)
 
     def load(self, item: Item) -> None:
-        self._reset_delete_confirmation()
         self._item_id = item.id
         self.title_edit.blockSignals(True)
         self.title_edit.setText(item.title)
@@ -348,33 +340,17 @@ class DetailWindow(QWidget):
     def delete_item(self) -> None:
         if not self._item_id:
             return
-        if not self._delete_armed:
-            self._delete_armed = True
-            self.delete_btn.setText("确认删除")
-            self.delete_btn.setAccessibleName("确认删除任务")
-            self.delete_btn.setToolTip("再点一次删除，4 秒后取消")
-            self.delete_btn.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
-            self.delete_btn.setMinimumWidth(0)
-            self.delete_btn.setMaximumWidth(16777215)
-            self.delete_btn.setStyleSheet(
-                f"QToolButton#deleteBtn{{background:{URGENT_BG};color:{URGENT_DOT};"
-                f"border:1px solid {URGENT_LINE};border-radius:16px;"
-                "padding:0 14px;font-size:13px;font-weight:600;}"
-                f"QToolButton#deleteBtn:hover{{border:1px solid {URGENT_DOT};}}"
-                f"QToolButton#deleteBtn:focus{{border:2px solid {COBALT};}}"
-            )
-            self._delete_timer.start(self.DELETE_CONFIRM_MS)
-            return
-        self._delete_timer.stop()
-        self._store.delete(self._item_id)
+        item_id = self._item_id
+        self.save_all()
+        raw = self._store.read_raw(item_id) or ""
+        title = self.title_edit.text().strip()
+        self._store.delete(item_id)
         self._item_id = None
-        self._reset_delete_confirmation()
         self.hide()
+        self.deleted.emit(item_id, raw, title)
         self.closed.emit()
 
-    def _reset_delete_confirmation(self) -> None:
-        self._delete_timer.stop()
-        self._delete_armed = False
+    def _paint_delete_btn(self) -> None:
         self.delete_btn.setText("删除")
         self.delete_btn.setAccessibleName("删除任务")
         self.delete_btn.setToolTip("删除")
