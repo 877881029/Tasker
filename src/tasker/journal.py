@@ -6,6 +6,12 @@ import re
 
 
 STAMP_LINE = re.compile(r"^(\d{6}\.\d{1,2}(?:AM|PM))$")
+_BREAKS = re.compile("\r\n|[\r\v\f\x85\u2028\u2029]")
+
+
+def normalize_breaks(text: str) -> str:
+    """Map pasted line/paragraph separators (U+2028, CR, VT, ...) to plain newlines."""
+    return _BREAKS.sub("\n", text or "")
 
 
 def stamp_for(when: datetime) -> str:
@@ -15,6 +21,7 @@ def stamp_for(when: datetime) -> str:
 
 
 def parse_journal(body: str) -> list[tuple[str, str]]:
+    body = normalize_breaks(body)
     raw = (body or "").strip("\n")
     if not raw.strip():
         return []

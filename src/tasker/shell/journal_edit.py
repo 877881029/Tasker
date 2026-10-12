@@ -21,6 +21,7 @@ from PySide6.QtWebEngineCore import QWebEngineSettings
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWidgets import QFrame, QPlainTextEdit, QSizePolicy, QWidget
 
+from tasker.journal import normalize_breaks
 from tasker.preview.md_visual import TaskerWebPage
 from tasker.theme import COBALT, INK, MUTED, PAPER, UI_FAMILIES, UI_FONT, wrap_document_html
 
@@ -105,7 +106,7 @@ def journal_log_markup(
     edit = ' contenteditable="true" spellcheck="false"' if writable else ""
     for index, (stamp, text) in enumerate(entries):
         klass = " newest" if index == 0 else ""
-        lines = escape(text or "").split("\n")
+        lines = escape(normalize_breaks(text)).split("\n")
         if text:
             body = "<br>".join(line if line else "&nbsp;" for line in lines)
         else:
@@ -355,6 +356,13 @@ class JournalEditor(QPlainTextEdit):
         self._paint_opaque_ink()
         self._sync_gutter()
 
+    def insertFromMimeData(self, source) -> None:  # noqa: N802
+        if source.hasText():
+            self.textCursor().insertText(normalize_breaks(source.text()))
+            self.ensureCursorVisible()
+            return
+        super().insertFromMimeData(source)
+
     def entries(self) -> list[tuple[str, str]]:
         found: list[tuple[str, str]] = []
         stamp: str | None = None
@@ -362,16 +370,17 @@ class JournalEditor(QPlainTextEdit):
         block = self.document().begin()
         while block.isValid():
             marked = _stamp_of(block)
+            text = normalize_breaks(block.text())
             if marked:
                 if stamp is not None:
                     found.append((stamp, "\n".join(parts).strip("\n")))
                 stamp = marked
-                parts = [block.text()]
+                parts = [text]
             elif stamp is None:
                 stamp = ""
-                parts = [block.text()]
+                parts = [text]
             else:
-                parts.append(block.text())
+                parts.append(text)
             block = block.next()
         if stamp is not None:
             found.append((stamp, "\n".join(parts).strip("\n")))
