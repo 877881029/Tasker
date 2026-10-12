@@ -5,7 +5,7 @@ Git：`main` 应与 `origin/main` 同步（https://github.com/877881029/Tasker �
 
 ## 当前目标
 
-**紧急任务 DDL 倒计时**（实现中）
+**紧急任务 DDL 倒计时**（已完成 2026-10-12，`f7c9548`，122 测试通过，已部署：双击桌面 Tasker）
 
 - 详情设置 DDL；列表任务右侧倒计时胶囊 `03d-14h-57m`；紧急任务按 DDL 先后排序
 - 规格：`docs/superpowers/specs/2026-10-12-urgent-deadline-design.md`
