@@ -177,6 +177,10 @@ class Store:
         self._tasks = self._root / "tasks"
         self._tasks.mkdir(parents=True, exist_ok=True)
 
+    @property
+    def root(self) -> Path:
+        return self._root
+
     def _path_for(self, item_id: str) -> Path:
         return self._tasks / f"{item_id}.md"
 

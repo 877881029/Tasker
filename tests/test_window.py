@@ -169,9 +169,9 @@ def test_dock_is_paper_not_white_plates(qtbot, tmp_path, monkeypatch):
     assert not dock.pin_btn.icon().isNull()
     assert dock.add_btn.text() == ""
     assert not dock.add_btn.icon().isNull()
-    assert dock.close_btn.text() == ""
-    assert not dock.close_btn.icon().isNull()
-    assert dock.close_btn.toolTip() == "隐藏到托盘"
+    assert dock.view_btn.text() == ""
+    assert not dock.view_btn.icon().isNull()
+    assert dock.view_btn.toolTip() == "显示最新日志摘要"
     assert not dock.search.hasFrame()
     assert dock.search.height() == 34
     assert len(dock.search.actions()) == 1
@@ -180,7 +180,7 @@ def test_dock_is_paper_not_white_plates(qtbot, tmp_path, monkeypatch):
     assert dock.search.palette().color(QPalette.ColorRole.PlaceholderText).name() == "#6b655f"
     assert dock.add_btn.size() == QSize(32, 32)
     assert dock.pin_btn.size() == QSize(32, 32)
-    assert dock.close_btn.size() == QSize(32, 32)
+    assert dock.view_btn.size() == QSize(32, 32)
     assert dock.search.styleSheet() == "" or "white" not in dock.styleSheet()
     assert PAPER in dock.styleSheet()
     assert dock.chrome.layout().itemAt(0).widget() is dock.search
@@ -238,8 +238,8 @@ def test_cards_and_rail_tools_are_keyboard_and_accessibility_ready(
     assert "普通" in card.toolTip()
     assert dock.add_btn.accessibleName() == "新建事项"
     assert dock.pin_btn.accessibleName() == "置顶窗口"
-    assert dock.close_btn.accessibleName() == "隐藏到托盘"
-    assert dock.close_btn.nextInFocusChain() is card
+    assert dock.view_btn.accessibleName() == "显示日志摘要"
+    assert dock.view_btn.nextInFocusChain() is card
     assert "QWidget#itemCard:focus" in dock_style()
     assert "QToolButton#addBtn:focus" in dock_style()
 
@@ -451,7 +451,7 @@ def test_closing_detail_keeps_moved_dock_position(qtbot, tmp_path, monkeypatch):
     assert dock.width() == collapsed
 
 
-def test_close_button_hides_dock(qtbot, tmp_path, monkeypatch):
+def test_escape_hides_dock_and_view_toggle_replaces_close(qtbot, tmp_path, monkeypatch):
     monkeypatch.setenv("TASKER_DATA_DIR", str(tmp_path))
     from tasker.shell.window import DockWindow
 
@@ -460,9 +460,9 @@ def test_close_button_hides_dock(qtbot, tmp_path, monkeypatch):
     dock.show()
     assert dock.windowFlags() & Qt.WindowType.FramelessWindowHint
     assert dock.windowFlags() & Qt.WindowType.Tool
-    assert dock.close_btn.text() == ""
-    assert not dock.close_btn.icon().isNull()
-    dock.close_btn.click()
+    assert getattr(dock, "close_btn", None) is None
+    assert dock.view_btn.isCheckable()
+    dock.escape()
     assert not dock.isVisible()
     assert dock.tray is not None
 

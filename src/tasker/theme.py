@@ -56,7 +56,7 @@ STATE_PILL = {
     "done": (DONE_BG, DONE_LINE),
 }
 
-_TOOLS = ("QToolButton#addBtn", "QToolButton#pinBtn", "QToolButton#closeDock")
+_TOOLS = ("QToolButton#addBtn", "QToolButton#pinBtn", "QToolButton#viewToggle")
 
 
 def _each(suffix: str) -> str:
@@ -96,7 +96,7 @@ def dock_style() -> str:
         f"{_each('')}{{background:transparent;border:none;border-radius:6px;"
         f"color:{INK};padding:0;}}"
         f"{_each(':hover')}{{background:{HOVER};}}"
-        f"{_each(':pressed')},QToolButton#pinBtn:checked{{background:{SELECTED};}}"
+        f"{_each(':pressed')},QToolButton#pinBtn:checked,QToolButton#viewToggle:checked{{background:{SELECTED};}}"
         f"{_each(':focus')}{{border:2px solid {COBALT};}}"
         "QWidget#itemCard{}"
         f"QWidget#itemCard:focus{{border:2px solid {COBALT};}}"

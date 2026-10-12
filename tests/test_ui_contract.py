@@ -40,7 +40,7 @@ def test_theme_tokens_are_locked():
     assert "border-radius:6px" in css
     assert "QToolButton#pinBtn:checked" in css
     assert "QToolButton#addBtn:pressed" in css
-    assert f"QToolButton#closeDock:hover{{background:{theme.HOVER}" in css
+    assert f"QToolButton#viewToggle:hover{{background:{theme.HOVER}" in css
     assert f"QWidget#rail{{background:{theme.CHROME}" in css
     assert f"QWidget#detailHost{{background:{theme.PAPER}" in css
     assert theme.COBALT not in css.split("QWidget#shell[bubble='true']")[1].split("}")[0]

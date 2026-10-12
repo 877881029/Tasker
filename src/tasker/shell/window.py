@@ -40,6 +40,7 @@ from tasker.deadline import build_deadline_menu, countdown_text, deadline_label
 from tasker.reminders import ReminderTracker, badge_text, overdue_count
 from tasker.report import summary_line, weekly_report
 from tasker.resources import resource_path
+from tasker.settings import load_settings, save_setting
 from tasker.shell import autostart
 from tasker.shell.detail import DetailWindow
 from tasker.shell.quick_capture import QuickCapture
@@ -154,7 +155,7 @@ IGNORE_NAMES = frozenset(
         "search",
         "addBtn",
         "pinBtn",
-        "closeDock",
+        "viewToggle",
         "itemCard",
         "titleField",
         "journalEditor",
@@ -479,9 +480,16 @@ class ItemCard(QWidget):
     DOT = 10
 
     def __init__(
-        self, store: Store, item: Item, on_open, on_status=None, parent=None
+        self,
+        store: Store,
+        item: Item,
+        on_open,
+        on_status=None,
+        parent=None,
+        show_summary: bool = False,
     ) -> None:
         super().__init__(parent)
+        self._summary_on = show_summary
         self._store = store
         self.item_id = item.id
         self._on_open = on_open
@@ -542,6 +550,10 @@ class ItemCard(QWidget):
         self.on_nav = None
         self.on_delete = None
         self.apply_item(item)
+
+    def set_summary_visible(self, on: bool) -> None:
+        self._summary_on = on
+        self.summary.setVisible(bool(self.summary.fullText()) and on)
 
     def is_selected(self) -> bool:
         return self._selected
@@ -633,7 +645,7 @@ class ItemCard(QWidget):
         self.importance.setAccessibleName(f"任务状态：{state}")
         line = summary_line(item.status_pin)
         self.summary.setFullText(line)
-        self.summary.setVisible(bool(line))
+        self.summary.setVisible(bool(line) and self._summary_on)
         self._deadline = item.deadline if item.state == "urgent" else None
         self.refresh_countdown()
 
@@ -769,24 +781,32 @@ class DockWindow(QWidget):
         self.pin_btn.setAccessibleName("置顶窗口")
         self.pin_btn.setCheckable(True)
         self.pin_btn.toggled.connect(self._toggle_pin)
-        self.close_btn = QToolButton()
-        self.close_btn.setObjectName("closeDock")
-        hide_icon = resource_path("assets", "icons", "hide.svg")
-        if hide_icon.exists():
-            self.close_btn.setIcon(QIcon(str(hide_icon)))
-            self.close_btn.setIconSize(QSize(16, 16))
-        self.close_btn.setFixedSize(32, 32)
-        self.close_btn.setToolTip("隐藏到托盘")
-        self.close_btn.setAccessibleName("隐藏到托盘")
-        self.close_btn.clicked.connect(self._close_dock)
+        self.view_btn = QToolButton()
+        self.view_btn.setObjectName("viewToggle")
+        view_icon = resource_path("assets", "icons", "summary.svg")
+        if view_icon.exists():
+            icon = QIcon(str(view_icon))
+            view_on = resource_path("assets", "icons", "summary-on.svg")
+            if view_on.exists():
+                icon.addFile(str(view_on), QSize(), QIcon.Mode.Normal, QIcon.State.On)
+                icon.addFile(str(view_on), QSize(), QIcon.Mode.Active, QIcon.State.On)
+            self.view_btn.setIcon(icon)
+            self.view_btn.setIconSize(QSize(16, 16))
+        self.view_btn.setFixedSize(32, 32)
+        self.view_btn.setCheckable(True)
+        self.view_btn.setAccessibleName("显示日志摘要")
+        self._show_summary = bool(load_settings(store.root).get("show_summary", False))
+        self.view_btn.setChecked(self._show_summary)
+        self._paint_view_btn()
+        self.view_btn.toggled.connect(self.set_summary_mode)
         header.addWidget(self.search, 1)
         header.addSpacing(4)
         header.addWidget(self.add_btn)
         header.addWidget(self.pin_btn)
-        header.addWidget(self.close_btn)
+        header.addWidget(self.view_btn)
         QWidget.setTabOrder(self.search, self.add_btn)
         QWidget.setTabOrder(self.add_btn, self.pin_btn)
-        QWidget.setTabOrder(self.pin_btn, self.close_btn)
+        QWidget.setTabOrder(self.pin_btn, self.view_btn)
 
         self.list_host = QWidget()
         self.list_host.setObjectName("listHost")
@@ -898,6 +918,26 @@ class DockWindow(QWidget):
         self.tray.messageClicked.connect(self._on_message_clicked)
         if QSystemTrayIcon.isSystemTrayAvailable():
             self.tray.show()
+
+    def summary_mode(self) -> bool:
+        return self._show_summary
+
+    def set_summary_mode(self, on: bool) -> None:
+        on = bool(on)
+        if self.view_btn.isChecked() != on:
+            self.view_btn.setChecked(on)
+            return
+        self._show_summary = on
+        self._paint_view_btn()
+        save_setting(self._store.root, "show_summary", on)
+        for card in self.cards():
+            card.set_summary_visible(on)
+
+    def _paint_view_btn(self) -> None:
+        if self._show_summary:
+            self.view_btn.setToolTip("切换为简约列表（只显示标题）")
+        else:
+            self.view_btn.setToolTip("显示最新日志摘要")
 
     def _setup_shortcuts(self) -> None:
         bindings = (
@@ -1385,7 +1425,7 @@ class DockWindow(QWidget):
             self.list_layout.addWidget(empty)
             self._arm_frame()
             return
-        previous: QWidget = self.close_btn
+        previous: QWidget = self.view_btn
         active = [item for item in items if item.state != "done"]
         done = [item for item in items if item.state == "done"]
         show_done = (
@@ -1418,7 +1458,13 @@ class DockWindow(QWidget):
         self._arm_frame()
 
     def _add_card(self, item: Item, previous: QWidget) -> QWidget:
-        card = ItemCard(self._store, item, self.open_detail, self._on_card_status)
+        card = ItemCard(
+            self._store,
+            item,
+            self.open_detail,
+            self._on_card_status,
+            show_summary=self._show_summary,
+        )
         card.on_nav = self._card_nav
         card.on_delete = self.delete_item
         card.set_selected(item.id == self._open_item_id)

@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+  <title>Log summary</title>
+  <g fill="none" stroke="#1f1d1a" stroke-width="1.6" stroke-linecap="round">
+    <path d="M4.5 6h.01" stroke-width="2.4"/>
+    <path d="M8.5 6h11"/>
+    <path d="M8.5 9.5h7" stroke-width="1.2" opacity=".55"/>
+    <path d="M4.5 14.5h.01" stroke-width="2.4"/>
+    <path d="M8.5 14.5h11"/>
+    <path d="M8.5 18h7" stroke-width="1.2" opacity=".55"/>
+  </g>
+</svg>

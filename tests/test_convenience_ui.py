@@ -52,9 +52,33 @@ def test_summary_line_shows_latest_log(qtbot, tmp_path, monkeypatch):
         qtbot, tmp_path, monkeypatch, ("有日志", "pending", body), ("无日志", "pending", "")
     )
     cards = {card.item_id: card for card in dock.cards()}
+    assert not dock.summary_mode() and not dock.view_btn.isChecked()
+    assert cards[a.id].summary.isHidden()
+    dock.view_btn.click()
+    assert dock.summary_mode() and dock.view_btn.isChecked()
+    cards = {card.item_id: card for card in dock.cards()}
     assert cards[a.id].summary.fullText() == "最新进展"
     assert not cards[a.id].summary.isHidden()
     assert cards[b.id].summary.isHidden()
+    assert "简约" in dock.view_btn.toolTip()
+    dock.refresh()
+    card = next(card for card in dock.cards() if card.item_id == a.id)
+    assert not card.summary.isHidden()
+    dock.view_btn.click()
+    card = next(card for card in dock.cards() if card.item_id == a.id)
+    assert card.summary.isHidden()
+
+
+def test_summary_mode_persists(qtbot, tmp_path, monkeypatch):
+    from tasker.shell.window import DockWindow
+
+    dock, store, (a,) = _dock(qtbot, tmp_path, monkeypatch, ("有", "pending", "261012.3PM\n\n进展"))
+    dock.set_summary_mode(True)
+    again = DockWindow(store)
+    qtbot.addWidget(again)
+    assert again.summary_mode() and again.view_btn.isChecked()
+    assert not again.cards()[0].summary.isHidden()
+    assert (tmp_path / "settings.json").is_file()
 
 
 def test_card_context_menu_sets_deadline(qtbot, tmp_path, monkeypatch):

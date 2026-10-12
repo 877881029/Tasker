@@ -45,7 +45,7 @@ Locked geometry / chrome (not hex, still frozen):
 - Open detail = same window, left pane + rail; rail width stays that third; shell `bubble='true'` → **2px cobalt** outline.
 - Icon: cobalt **T** `assets/icons/tasker.ico` / `tasker-t.svg`. Do not swap letter, hue, or use a screenshot of the live window as the glyph.
 - Typeface for rendered HTML: Candara, Calibri, Segoe UI (see `document_style`).
-- Object names used by QSS stay: `dock`, `shell`, `detailHost`, `rail`, `itemCard`, `listHost`, `listScroll`, `search`, `addBtn`, `pinBtn`, `closeDock`, `titleField`.
+- Object names used by QSS stay: `dock`, `shell`, `detailHost`, `rail`, `itemCard`, `listHost`, `listScroll`, `search`, `addBtn`, `pinBtn`, `viewToggle`, `titleField`.
 
 `card_style(state)` must keep mapping `pending|urgent|done` → those fills and **no strikethrough**.
 
@@ -121,7 +121,7 @@ List order locked: urgent, then pending, then done; within a group newest `updat
 
 - Flags: `Qt.Tool | FramelessWindowHint` (+ `WindowStaysOnTopHint` when pinned). No taskbar app button.
 - Tray: `QSystemTrayIcon`; Trigger/DoubleClick or menu 「显示」 → `show_from_tray`; 「退出」 quits. Dock × **hides** (process stays). 2026-10-12 便捷包新增菜单：快速记录、复制本周周报、开机自启；超期角标；详情未打开时 Esc 隐藏到托盘（钉住时不隐藏）。
-- Chrome left-to-right: search (stretch), `+`, pin, ×. No 「事项」 label.
+- Chrome left-to-right: search (stretch), `+`, pin, 摘要切换 `viewToggle`（2026-10-12 取代 ×；隐藏改用 Esc / 托盘）. No 「事项」 label.
 - `+` → `ensure_draft` then `open_detail`. Card click → `open_detail`. Search filters `list_visible`.
 - Public: `refresh()`, `open_detail(item_id: str)`, `show_from_tray()`, `tray`.
 - `geometry_for_screen(avail: QRect) -> QRect` stays right-third.
