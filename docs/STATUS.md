@@ -10,6 +10,7 @@ Git：`main` 应与 `origin/main` 同步（https://github.com/877881029/Tasker �
 
 - DDL 提醒与托盘角标、全局快捷键快速记录、列表右键设 DDL、删除可撤销、已完成折叠、键盘全流程、搜索关键词、复制本周周报、开机自启、最新日志摘要；详情未打开时 Esc 隐藏到托盘（钉住则常驻）
 - 右上角 × 改为「日志摘要/简约」切换按钮（默认简约，设置存 settings.json）
+- 修复：粘贴自 PPT/Word 的 U+2028 行分隔符在只读视图被折叠成空格，现统一规范为换行（`b876872`）
 - 全局快捷键优先 Win+Alt+T，本机被系统占用，自动回退 Ctrl+Alt+T（托盘菜单显示实际组合）
 - 规格：`docs/superpowers/specs/2026-10-12-convenience-pack-design.md`
 - 计划：`docs/superpowers/plans/2026-10-12-convenience-pack.md`
