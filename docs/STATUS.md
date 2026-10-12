@@ -1,9 +1,18 @@
 # Tasker 项目状态（AI 接手必读）
 
-最后更新：2026-10-10  
+最后更新：2026-10-12  
 Git：`main` 应与 `origin/main` 同步（https://github.com/877881029/Tasker ）。
 
+
 ## 当前目标
+
+**便捷功能包 10 项**（实现中）
+
+- DDL 提醒与托盘角标、全局快捷键快速记录、列表右键设 DDL、删除可撤销、已完成折叠、键盘全流程、搜索关键词、复制本周周报、开机自启、最新日志摘要
+- 规格：`docs/superpowers/specs/2026-10-12-convenience-pack-design.md`
+- 计划：`docs/superpowers/plans/2026-10-12-convenience-pack.md`
+
+## 上一目标（已完成）
 
 **紧急任务 DDL 倒计时**（已完成 2026-10-12，`f7c9548`，122 测试通过，已部署：双击桌面 Tasker）
 
@@ -11,7 +20,7 @@ Git：`main` 应与 `origin/main` 同步（https://github.com/877881029/Tasker �
 - 规格：`docs/superpowers/specs/2026-10-12-urgent-deadline-design.md`
 - 计划：`docs/superpowers/plans/2026-10-12-urgent-deadline.md`
 
-## 上一目标（已完成）
+## 更早目标（已完成）
 
 **窗口拖拽、缩放与屏幕自适应**（已完成，冻结包已重建并部署；双击桌面 Tasker 即可使用）
 
