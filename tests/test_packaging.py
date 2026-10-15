@@ -18,6 +18,7 @@ def test_tasker_spec_onedir_icon_and_webengine() -> None:
     assert "assets/icons/search.svg" in normalized
     assert "assets/icons/summary.svg" in normalized
     assert "assets/icons/summary-on.svg" in normalized
+    assert "assets/icons/settings.svg" in normalized
     assert "assets/icons/trash.svg" in normalized
     assert "QtSvg" in spec
     assert "QtWebEngineProcess.exe" in spec

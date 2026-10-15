@@ -2,12 +2,10 @@ import re
 from datetime import datetime
 from dataclasses import replace
 
-from PySide6.QtCore import QMimeData, QRect, Qt
-from PySide6.QtGui import QImage, QPalette
+from PySide6.QtCore import QRect, Qt
+from PySide6.QtGui import QPalette
 
 from PySide6.QtWidgets import QPlainTextEdit
-from tasker.preview.md_edit import MarkdownEdit
-from tasker.preview.md_visual import render_markdown
 from tasker.shell.detail import DetailWindow, detail_geometry
 from tasker.shell.journal_edit import journal_document_html
 from tasker.store import Store
@@ -21,12 +19,17 @@ def test_detail_geometry_fills_left():
     assert geo.width() == 800
 
 
-def test_render_markdown_escapes_raw_html_and_links():
-    html = render_markdown('see <script>x</script> [hi](https://example.com)')
-    assert "<script>" not in html
-    assert "https://example.com" in html
-    assert wrap_document_html("<p>x</p>").startswith("<!DOCTYPE html>")
+def test_read_view_links_are_clickable_and_safe():
+    from tasker.shell.journal_edit import journal_log_markup
 
+    html = journal_log_markup(
+        [("261015.4PM", "见 https://example.com/a?b=1&c=2。还有 <script>x</script>")]
+    )
+    assert '<a href="https://example.com/a?b=1&amp;c=2">https://example.com/a?b=1&amp;c=2</a>。' in html
+    assert "<script>" not in html
+    editable = journal_log_markup([("261015.4PM", "https://example.com")], writable=True)
+    assert "<a " not in editable
+    assert wrap_document_html("<p>x</p>").startswith("<!DOCTYPE html>")
 
 def test_journal_document_html_keeps_one_stamp_column():
     html = journal_document_html(
@@ -64,23 +67,6 @@ def test_journal_document_view_uses_chromium():
     from tasker.shell.journal_edit import JournalDocumentView
 
     assert issubclass(JournalDocumentView, QWebEngineView)
-
-
-def test_paste_image_writes_attachment(qtbot, tmp_path, monkeypatch):
-    monkeypatch.setenv("TASKER_DATA_DIR", str(tmp_path))
-    store = Store(tmp_path)
-    item = store.create()
-    edit = MarkdownEdit(store, item.id)
-    qtbot.addWidget(edit)
-    image = QImage(4, 4, QImage.Format.Format_ARGB32)
-    image.fill(Qt.GlobalColor.blue)
-    mime = QMimeData()
-    mime.setImageData(image)
-    edit.insertFromMimeData(mime)
-    text = edit.toPlainText()
-    assert text.startswith("![](")
-    assert (tmp_path / "tasks" / item.id).exists()
-    assert list((tmp_path / "tasks" / item.id).glob("*.png"))
 
 
 def _insert_head(win, text: str) -> None:

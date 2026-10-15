@@ -10,6 +10,7 @@ import uuid
 
 from tasker.journal import dump_journal, journal_has_text, parse_journal
 from tasker.paths import attachments_dir, data_dir, tasks_dir
+from tasker.safety import remove_file
 
 STATES = ("pending", "urgent", "done")
 
@@ -221,9 +222,11 @@ class Store:
         self._path_for(item.id).write_text(_render_task(item), encoding="utf-8")
         return item
 
-    def delete(self, item_id: str) -> None:
+    def delete(self, item_id: str, *, recycle: bool = True) -> None:
         path = self._path_for(item_id)
-        if path.exists():
+        if recycle:
+            remove_file(path)
+        elif path.exists():
             path.unlink()
 
     def read_raw(self, item_id: str) -> str | None:
@@ -244,7 +247,7 @@ class Store:
         keep = max(empties, key=lambda item: item.updated_at)
         for extra in empties:
             if extra.id != keep.id:
-                self.delete(extra.id)
+                self.delete(extra.id, recycle=False)
         return keep
 
     def ensure_draft(self) -> Item:

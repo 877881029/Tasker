@@ -40,7 +40,15 @@ from tasker.deadline import build_deadline_menu, countdown_text, deadline_label
 from tasker.reminders import ReminderTracker, badge_text, overdue_count
 from tasker.report import summary_line, weekly_report
 from tasker.resources import resource_path
-from tasker.settings import load_settings, save_setting
+from tasker.settings import (
+    SHORTCUTS,
+    get_setting,
+    reset_shortcuts,
+    save_setting,
+    save_shortcut,
+    shortcut_conflict,
+    shortcut_map,
+)
 from tasker.shell import autostart
 from tasker.shell.detail import DetailWindow
 from tasker.shell.quick_capture import QuickCapture
@@ -156,6 +164,7 @@ IGNORE_NAMES = frozenset(
         "addBtn",
         "pinBtn",
         "viewToggle",
+        "settingsBtn",
         "itemCard",
         "titleField",
         "journalEditor",
@@ -717,6 +726,8 @@ class DockWindow(QWidget):
         self._reminder_item: str | None = None
         self._quick: QuickCapture | None = None
         self.hotkey_label = ""
+        self.hotkey = None
+        self._settings = None
         self._badge = ""
         self._countdown_timer = QTimer(self)
         self._countdown_timer.setInterval(30_000)
@@ -795,18 +806,30 @@ class DockWindow(QWidget):
         self.view_btn.setFixedSize(32, 32)
         self.view_btn.setCheckable(True)
         self.view_btn.setAccessibleName("显示日志摘要")
-        self._show_summary = bool(load_settings(store.root).get("show_summary", False))
+        self._show_summary = bool(get_setting(store.root, "show_summary"))
         self.view_btn.setChecked(self._show_summary)
         self._paint_view_btn()
         self.view_btn.toggled.connect(self.set_summary_mode)
+        self.settings_btn = QToolButton()
+        self.settings_btn.setObjectName("settingsBtn")
+        gear = resource_path("assets", "icons", "settings.svg")
+        if gear.exists():
+            self.settings_btn.setIcon(QIcon(str(gear)))
+            self.settings_btn.setIconSize(QSize(16, 16))
+        self.settings_btn.setFixedSize(32, 32)
+        self.settings_btn.setToolTip("设置：功能说明、快捷键、数据与备份")
+        self.settings_btn.setAccessibleName("设置")
+        self.settings_btn.clicked.connect(lambda _c=False: self.open_settings())
         header.addWidget(self.search, 1)
         header.addSpacing(4)
         header.addWidget(self.add_btn)
         header.addWidget(self.pin_btn)
         header.addWidget(self.view_btn)
+        header.addWidget(self.settings_btn)
         QWidget.setTabOrder(self.search, self.add_btn)
         QWidget.setTabOrder(self.add_btn, self.pin_btn)
         QWidget.setTabOrder(self.pin_btn, self.view_btn)
+        QWidget.setTabOrder(self.view_btn, self.settings_btn)
 
         self.list_host = QWidget()
         self.list_host.setObjectName("listHost")
@@ -905,6 +928,8 @@ class DockWindow(QWidget):
         self.capture_action.triggered.connect(self.quick_capture)
         self.report_action = menu.addAction("复制本周周报")
         self.report_action.triggered.connect(self.copy_weekly_report)
+        self.settings_action = menu.addAction("设置…")
+        self.settings_action.triggered.connect(lambda _c=False: self.open_settings())
         menu.addSeparator()
         self.autostart_action = menu.addAction("开机自启")
         self.autostart_action.setCheckable(True)
@@ -940,17 +965,78 @@ class DockWindow(QWidget):
             self.view_btn.setToolTip("显示最新日志摘要")
 
     def _setup_shortcuts(self) -> None:
-        bindings = (
-            ("Ctrl+N", self._add),
-            ("Ctrl+F", self.focus_search),
-            ("Ctrl+Z", self.undo_delete),
-            ("Ctrl+Shift+C", self.copy_weekly_report),
-        )
+        bindings = {
+            "new": self._add,
+            "search": self.focus_search,
+            "undo": self.undo_delete,
+            "report": self.copy_weekly_report,
+        }
+        self._shortcut_keys = shortcut_map(self._store.root)
         self._shortcuts = []
-        for keys, slot in bindings:
-            shortcut = QShortcut(QKeySequence(keys), self)
+        self._shortcut_by_action: dict[str, QShortcut] = {}
+        for action, slot in bindings.items():
+            shortcut = QShortcut(QKeySequence(self._shortcut_keys[action]), self)
             shortcut.activated.connect(slot)
             self._shortcuts.append(shortcut)
+            self._shortcut_by_action[action] = shortcut
+
+    def store_root(self):
+        return self._store.root
+
+    def shortcut_keys(self) -> dict[str, str]:
+        return dict(self._shortcut_keys)
+
+    def attach_hotkey(self, hotkey) -> None:
+        self.hotkey = hotkey
+        label = hotkey.register_text(self._shortcut_keys["quick_capture"])
+        if not label and self._shortcut_keys["quick_capture"]:
+            label = hotkey.register()
+        self.set_hotkey_label(label)
+
+    def apply_shortcut(self, action: str, keys: str) -> str | None:
+        reason = shortcut_conflict(self._shortcut_keys, action, keys)
+        if reason:
+            return reason
+        scope = SHORTCUTS[action][3]
+        if scope == "global":
+            if self.hotkey is not None:
+                label = self.hotkey.register_text(keys)
+                if not label:
+                    return f"{keys} 已被其它程序占用，请换一个组合"
+                self.set_hotkey_label(label)
+        elif scope == "dock":
+            self._shortcut_by_action[action].setKey(QKeySequence(keys))
+        self._shortcut_keys[action] = keys
+        save_shortcut(self._store.root, action, keys)
+        if scope == "detail" and self._detail is not None:
+            self._detail.set_shortcut_keys(
+                self._shortcut_keys["write"], self._shortcut_keys["save"]
+            )
+        return None
+
+    def reset_shortcuts(self) -> None:
+        reset_shortcuts(self._store.root)
+        defaults = shortcut_map(self._store.root)
+        for action, keys in defaults.items():
+            if SHORTCUTS[action][3] == "dock":
+                self._shortcut_by_action[action].setKey(QKeySequence(keys))
+        self._shortcut_keys = defaults
+        if self.hotkey is not None:
+            self.set_hotkey_label(self.hotkey.register_text(""))
+        if self._detail is not None:
+            self._detail.set_shortcut_keys(defaults["write"], defaults["save"])
+
+    def open_settings(self, section: str = "general") -> None:
+        from tasker.shell.settings_window import SettingsWindow
+
+        if self._settings is None:
+            self._settings = SettingsWindow(self)
+        else:
+            self._settings.sync()
+        self._settings.show_section(section)
+        self._settings.show()
+        self._settings.raise_()
+        self._settings.activateWindow()
 
     def keyPressEvent(self, event: QKeyEvent) -> None:
         if event.key() == Qt.Key.Key_Escape and not self.detail_host.isVisible():
@@ -1017,7 +1103,10 @@ class DockWindow(QWidget):
             return
         now = datetime.now()
         items = self._store.list_visible("")
+        notify = bool(get_setting(self._store.root, "reminders"))
         for reminder in self._reminders.check(items, now):
+            if not notify:
+                continue
             if reminder.item_id is not None:
                 self._reminder_item = reminder.item_id
             elif reminder.kind == "summary":
@@ -1081,7 +1170,12 @@ class DockWindow(QWidget):
         }:
             self.show_from_tray()
 
+    def save_open_detail(self) -> None:
+        if self._detail is not None and self._detail.isVisible():
+            self._detail.save_all()
+
     def _quit_app(self) -> None:
+        self.save_open_detail()
         app = QApplication.instance()
         if app is not None:
             app.quit()
@@ -1425,7 +1519,7 @@ class DockWindow(QWidget):
             self.list_layout.addWidget(empty)
             self._arm_frame()
             return
-        previous: QWidget = self.view_btn
+        previous: QWidget = self.settings_btn
         active = [item for item in items if item.state != "done"]
         done = [item for item in items if item.state == "done"]
         show_done = (
@@ -1572,6 +1666,9 @@ class DockWindow(QWidget):
             self._detail.closed.connect(self._on_detail_closed)
             self._detail.changed.connect(self._on_item_changed)
             self._detail.deleted.connect(self._on_detail_deleted)
+            self._detail.set_shortcut_keys(
+                self._shortcut_keys["write"], self._shortcut_keys["save"]
+            )
         self._detail.load(item)
         self.detail_host.setMaximumWidth(16777215)
         self.notch.show()

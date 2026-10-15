@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 
 from html import escape
 
@@ -99,6 +100,24 @@ def parse_write_state(payload: object) -> tuple[bool, list[tuple[str, str]]] | N
     return dirty, found
 
 
+_URL = re.compile(r"https?://[A-Za-z0-9\-._~:/?#\[\]@!$&;=%+,*()']+")
+_URL_TAIL = ".,;:!?)]"
+_ENTITY_END = re.compile(r"&#?\w+;$")
+
+
+def _linkify(escaped: str) -> str:
+    def repl(match: re.Match) -> str:
+        url, tail = match.group(0), ""
+        while url and url[-1] in _URL_TAIL:
+            if url[-1] == ";" and _ENTITY_END.search(url):
+                break
+            tail = url[-1] + tail
+            url = url[:-1]
+        return f'<a href="{url}">{url}</a>{tail}'
+
+    return _URL.sub(repl, escaped)
+
+
 def journal_log_markup(
     entries: list[tuple[str, str]], *, writable: bool = False
 ) -> str:
@@ -107,6 +126,8 @@ def journal_log_markup(
     for index, (stamp, text) in enumerate(entries):
         klass = " newest" if index == 0 else ""
         lines = escape(normalize_breaks(text)).split("\n")
+        if not writable:
+            lines = [_linkify(line) for line in lines]
         if text:
             body = "<br>".join(line if line else "&nbsp;" for line in lines)
         else:
@@ -133,6 +154,8 @@ def journal_document_html(
         f".txt{{color:{INK};font-size:15px;line-height:1.65;min-width:0;"
         "overflow-wrap:anywhere}"
         f".txt[contenteditable]{{outline:none;caret-color:{COBALT};min-height:1.65em}}"
+        f".txt a{{color:{COBALT};text-decoration:none}}"
+        ".txt a:hover{text-decoration:underline}"
     )
     script = ""
     if writable:

@@ -56,7 +56,12 @@ STATE_PILL = {
     "done": (DONE_BG, DONE_LINE),
 }
 
-_TOOLS = ("QToolButton#addBtn", "QToolButton#pinBtn", "QToolButton#viewToggle")
+_TOOLS = (
+    "QToolButton#addBtn",
+    "QToolButton#pinBtn",
+    "QToolButton#viewToggle",
+    "QToolButton#settingsBtn",
+)
 
 
 def _each(suffix: str) -> str:

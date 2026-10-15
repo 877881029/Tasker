@@ -33,6 +33,7 @@ a = Analysis(
         (str(ROOT / "assets/icons/hide.svg"), "assets/icons"),
         (str(ROOT / "assets/icons/summary.svg"), "assets/icons"),
         (str(ROOT / "assets/icons/summary-on.svg"), "assets/icons"),
+        (str(ROOT / "assets/icons/settings.svg"), "assets/icons"),
         (str(ROOT / "assets/icons/pin.svg"), "assets/icons"),
         (str(ROOT / "assets/icons/pin-on.svg"), "assets/icons"),
         (str(ROOT / "assets/icons/search.svg"), "assets/icons"),

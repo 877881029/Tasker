@@ -239,7 +239,7 @@ def test_cards_and_rail_tools_are_keyboard_and_accessibility_ready(
     assert dock.add_btn.accessibleName() == "新建事项"
     assert dock.pin_btn.accessibleName() == "置顶窗口"
     assert dock.view_btn.accessibleName() == "显示日志摘要"
-    assert dock.view_btn.nextInFocusChain() is card
+    assert dock.settings_btn.nextInFocusChain() is card
     assert "QWidget#itemCard:focus" in dock_style()
     assert "QToolButton#addBtn:focus" in dock_style()
 

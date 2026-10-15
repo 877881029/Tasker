@@ -161,9 +161,9 @@ class DetailWindow(QWidget):
     closed = Signal()
     changed = Signal(str)
     deleted = Signal(str, str, str)
-    _READ_STATUS = "Ctrl+I 写入 · Ctrl+S 保存 · Esc 收起"
-    _WRITE_STATUS = "正在写入 · Ctrl+S 保存 · Esc 保存并收起"
-    _SAVED_STATUS = "已保存 {time} · Ctrl+I 继续写入 · Esc 收起"
+    _READ_STATUS = "{write} 写入 · {save} 保存 · Esc 收起"
+    _WRITE_STATUS = "正在写入 · {save} 保存 · Esc 保存并收起"
+    _SAVED_STATUS = "已保存 {time} · {write} 继续写入 · Esc 收起"
 
     def __init__(self, store: Store, parent=None) -> None:
         super().__init__(parent)
@@ -264,7 +264,8 @@ class DetailWindow(QWidget):
         self.journal_dot.setObjectName("journalDot")
         self.journal_dot.setStyleSheet(f"color:{COBALT};font-size:10px;")
         self.journal_dot.hide()
-        self.journal_status = QLabel(self._READ_STATUS)
+        self._keys = {"write": "Ctrl+I", "save": "Ctrl+S"}
+        self.journal_status = QLabel(self._status_text(self._READ_STATUS))
         self.journal_status.setObjectName("journalStatus")
         self.journal_status.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.journal_status.setTextInteractionFlags(Qt.TextInteractionFlag.NoTextInteraction)
@@ -281,8 +282,8 @@ class DetailWindow(QWidget):
         layout.addWidget(self.footer)
 
         self.title_edit.editingFinished.connect(self._save_title)
-        QShortcut(QKeySequence("Ctrl+I"), self, activated=self.begin_write)
-        QShortcut(QKeySequence("Ctrl+S"), self, activated=self.save_keep_open)
+        self._write_shortcut = QShortcut(QKeySequence("Ctrl+I"), self, activated=self.begin_write)
+        self._save_shortcut = QShortcut(QKeySequence("Ctrl+S"), self, activated=self.save_keep_open)
         QShortcut(QKeySequence("Esc"), self, activated=self.close_detail)
 
     def load(self, item: Item) -> None:
@@ -293,7 +294,7 @@ class DetailWindow(QWidget):
         self.title_edit.blockSignals(False)
         self.sync_status(item)
         self.journal.load(item.body_md)
-        self._set_journal_status(self._READ_STATUS)
+        self._set_journal_status(self._status_text(self._READ_STATUS))
 
     def sync_status(self, item: Item) -> None:
         if item.id != self._item_id:
@@ -320,13 +321,13 @@ class DetailWindow(QWidget):
 
     def begin_write(self) -> None:
         self.journal.begin_write()
-        self._set_journal_status(self._WRITE_STATUS, writing=True)
+        self._set_journal_status(self._status_text(self._WRITE_STATUS), writing=True)
 
     def save_keep_open(self) -> None:
         self.save_all()
         self.journal.set_all_readonly()
         stamp = datetime.now().strftime("%H:%M")
-        self._set_journal_status(self._SAVED_STATUS.format(time=stamp))
+        self._set_journal_status(self._status_text(self._SAVED_STATUS, time=stamp))
 
     def save_all(self) -> None:
         self._save_title()
@@ -363,6 +364,16 @@ class DetailWindow(QWidget):
             f"QToolButton#deleteBtn:pressed{{background:{SELECTED};}}"
             f"QToolButton#deleteBtn:focus{{border:2px solid {COBALT};}}"
         )
+
+    def _status_text(self, template: str, **extra) -> str:
+        return template.format(**self._keys, **extra)
+
+    def set_shortcut_keys(self, write: str, save: str) -> None:
+        self._keys = {"write": write, "save": save}
+        self._write_shortcut.setKey(QKeySequence(write))
+        self._save_shortcut.setKey(QKeySequence(save))
+        if self.journal_dot.isHidden():
+            self._set_journal_status(self._status_text(self._READ_STATUS))
 
     def _set_journal_status(self, text: str, *, writing: bool = False) -> None:
         self.journal_status.setText(text)

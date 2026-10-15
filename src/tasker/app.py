@@ -27,8 +27,22 @@ class TaskerApp:
         from tasker.shell.hotkey import GlobalHotkey
 
         self.hotkey = GlobalHotkey(self.dock.quick_capture)
-        self.dock.set_hotkey_label(self.hotkey.register())
+        self.dock.attach_hotkey(self.hotkey)
         qapp.aboutToQuit.connect(self.hotkey.unregister)
+        qapp.aboutToQuit.connect(self.dock.save_open_detail)
+        qapp.commitDataRequest.connect(lambda _manager: self.dock.save_open_detail())
+        QTimer.singleShot(3000, self._daily_backup)
+
+    def _daily_backup(self) -> None:
+        from tasker.safety import daily_backup, default_backup_dir
+        from tasker.settings import get_setting
+
+        if not get_setting(self.store.root, "auto_backup"):
+            return
+        try:
+            daily_backup(self.store.root, default_backup_dir())
+        except OSError:
+            pass
 
     def show_dock(self) -> None:
         self.dock.show()

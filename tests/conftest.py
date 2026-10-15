@@ -9,3 +9,4 @@ from pathlib import Path
 _SCREEN = Path(os.path.relpath(Path(__file__).with_name("offscreen.json"))).as_posix()
 os.environ.setdefault("QT_QPA_PLATFORM", f"offscreen:configfile={_SCREEN}")
 os.environ.setdefault("TASKER_SKIP_SHELL_INTEGRATION", "1")
+os.environ.setdefault("TASKER_NO_RECYCLE", "1")
