@@ -9,7 +9,7 @@
 - 退出 / 注销前保存打开中的日志；删除进回收站；每日自动备份（文档\Tasker\backups，保留 7 份）
 - 设置窗口（齿轮按钮 / 托盘「设置…」）：通用开关、全部快捷键可改、功能说明、数据与备份
 - 只读日志链接可点击；删除未使用的 Markdown 预览代码
-- 发布仓库 `877881029/Tasker-releases`（保留最近 5 版）+ 一行安装 `irm .../latest/download/install.ps1 | iex`
+- 发布仓库 `877881029/Tasker-releases`（保留最近 5 版）+ 一行安装 `irm .../latest/download/install.ps1 | iex`；安装器不走 GitHub API（公司共享出口 IP 会触发 60 次/小时限流），改用 /releases/latest 跳转；本机已用一行命令实装验证（PS 5.1，约 9 分钟，数据保留）
 - 版本单一来源 `VERSION`；依赖锁定；新增 CHANGELOG、LICENSE（MIT）
 - 规格：`docs/superpowers/specs/2026-10-15-release-settings-safety-design.md`
 - 计划：`docs/superpowers/plans/2026-10-15-release-settings-safety.md`

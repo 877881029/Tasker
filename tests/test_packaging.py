@@ -80,6 +80,7 @@ def test_release_and_install_scripts() -> None:
     assert "877881029/Tasker-releases" in release and "[int]$Keep = 5" in release
     assert "--cleanup-tag" in release and "bump_version.py --check" in release
     assert "releases/latest" in install and "Programs\\Tasker" in install
+    assert "api.github.com" not in install
     assert "irm https://github.com/877881029/Tasker-releases/releases/latest/download/install.ps1 | iex" in (
         ROOT / "README.md"
     ).read_text(encoding="utf-8")

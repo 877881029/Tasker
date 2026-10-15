@@ -9,18 +9,38 @@ $ProgressPreference = "SilentlyContinue"
 $Repo = "877881029/Tasker-releases"
 $Target = Join-Path $env:LOCALAPPDATA "Programs\Tasker"
 
+function Get-LatestTag {
+    # Follow the web redirect /releases/latest -> /releases/tag/<tag>; unlike the REST API
+    # this has no per-IP rate limit, which shared office networks hit quickly.
+    $request = [System.Net.HttpWebRequest]::Create("https://github.com/$Repo/releases/latest")
+    $request.Method = "HEAD"
+    $request.AllowAutoRedirect = $false
+    $request.UserAgent = "Tasker-installer"
+    $response = $request.GetResponse()
+    try {
+        $location = $response.Headers["Location"]
+    } finally {
+        $response.Close()
+    }
+    if (-not $location -or $location -notmatch "/releases/tag/(?<tag>[^/?#]+)") {
+        throw "Could not find the latest Tasker release"
+    }
+    return $Matches["tag"]
+}
+
 Write-Host "Tasker: looking up the latest release..."
-$Release = Invoke-RestMethod "https://api.github.com/repos/$Repo/releases/latest" -Headers @{ "User-Agent" = "Tasker-installer" }
-$Asset = $Release.assets | Where-Object { $_.name -like "Tasker-*-win64.zip" } | Select-Object -First 1
-if (-not $Asset) { throw "No Tasker zip found in $($Release.tag_name)" }
+[Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
+$Tag = Get-LatestTag
+$Version = $Tag.TrimStart("v")
+$AssetName = "Tasker-$Version-win64.zip"
+$AssetUrl = "https://github.com/$Repo/releases/download/$Tag/$AssetName"
 
 $Work = Join-Path $env:TEMP "tasker-install-$([guid]::NewGuid().ToString('N'))"
 New-Item -ItemType Directory -Path $Work | Out-Null
 try {
-    $Zip = Join-Path $Work $Asset.name
-    $SizeMb = [math]::Round($Asset.size / 1MB)
-    Write-Host "Tasker: downloading $($Release.tag_name) ($SizeMb MB)..."
-    Invoke-WebRequest $Asset.browser_download_url -OutFile $Zip -UseBasicParsing
+    $Zip = Join-Path $Work $AssetName
+    Write-Host "Tasker: downloading $Tag (about 210 MB)..."
+    Invoke-WebRequest $AssetUrl -OutFile $Zip -UseBasicParsing
 
     Write-Host "Tasker: unpacking..."
     $Unpacked = Join-Path $Work "unpacked"
@@ -49,7 +69,7 @@ try {
     $Link.Save()
 
     Start-Process $Exe
-    Write-Host "Tasker $($Release.tag_name) installed to $Target and started. Desktop shortcut: Tasker."
+    Write-Host "Tasker $Tag installed to $Target and started. Desktop shortcut: Tasker."
 } finally {
     Remove-Item $Work -Recurse -Force -ErrorAction SilentlyContinue
 }
