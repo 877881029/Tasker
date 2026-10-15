@@ -7,3 +7,4 @@
 3. 按 `.cursor/rules/git-progress-handoff.mdc`：设计/计划/任务边界提交并推送到 `origin/main`。用户可见更新必须重打 `dist\Tasker\Tasker.exe` 并刷新桌面快捷方式。
 4. UI 优化前读并遵守 `docs/superpowers/specs/2026-09-15-ui-contract-lock.md`（主题与公开接口锁死）。
 5. 当前功能规格以 `docs/STATUS.md` 指向的文件为准。
+6. 每次用户可见更新：版本 patch +1（`scripts\bump_version.py`），同步 `CHANGELOG.md` / `README.md` / `docs/STATUS.md`，`scripts\release.ps1` 发布（保留最近 5 版）。

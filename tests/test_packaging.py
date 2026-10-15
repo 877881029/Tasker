@@ -48,3 +48,38 @@ def test_setup_ps1_freezes_unless_skip_build() -> None:
     assert "dist\\Tasker\\Tasker.exe" in text
     assert "-m tasker" in text
     assert "docker" not in text.lower()
+
+
+def test_version_is_single_source() -> None:
+    import re
+    import subprocess
+    import sys
+
+    version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
+    assert re.fullmatch(r"\d+\.\d+\.\d+", version)
+    pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    assert 'dynamic = ["version"]' in pyproject and 'file = "VERSION"' in pyproject
+    check = subprocess.run(
+        [sys.executable, str(ROOT / "scripts" / "bump_version.py"), "--check"],
+        capture_output=True,
+        text=True,
+    )
+    assert check.returncode == 0, check.stdout
+    assert f"## {version}" in (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+    assert version in (ROOT / "README.md").read_text(encoding="utf-8")
+
+
+def test_dependencies_are_pinned() -> None:
+    pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    assert '"PySide6==' in pyproject and '"pywin32==' in pyproject
+
+
+def test_release_and_install_scripts() -> None:
+    release = (ROOT / "scripts" / "release.ps1").read_text(encoding="utf-8-sig")
+    install = (ROOT / "scripts" / "install.ps1").read_text(encoding="utf-8")
+    assert "877881029/Tasker-releases" in release and "[int]$Keep = 5" in release
+    assert "--cleanup-tag" in release and "bump_version.py --check" in release
+    assert "releases/latest" in install and "Programs\\Tasker" in install
+    assert "irm https://github.com/877881029/Tasker-releases/releases/latest/download/install.ps1 | iex" in (
+        ROOT / "README.md"
+    ).read_text(encoding="utf-8")

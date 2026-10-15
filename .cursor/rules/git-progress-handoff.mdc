@@ -13,3 +13,4 @@ alwaysApply: true
 - 未推送不算同步。推送失败要记在 STATUS 阻塞项。
 - 不要只改代码不改 STATUS，也不要只在对话里说“下一步”。
 - 用户可见的功能合入 `main` 后，必须停掉运行中的 Tasker、跑 `scripts\build_windows.ps1`、覆盖桌面 `Tasker.lnk` 指向新的 `dist\Tasker\Tasker.exe`。未重打 exe 不算该更新对用户完成。
+- 每次用户可见更新：`python scripts\bump_version.py` 把版本 patch +1，并同步 `CHANGELOG.md`、`README.md`、`docs/STATUS.md`；用 `scripts\release.ps1` 发布到 `877881029/Tasker-releases`（保留最近 5 版）。

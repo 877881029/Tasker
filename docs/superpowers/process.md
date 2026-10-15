@@ -20,7 +20,7 @@
 1. 设计：用户确认后写入 `specs/`，更新 `STATUS.md`，提交并推送。  
 2. 计划：TDD 计划写入 `plans/`，更新 `STATUS.md`，提交并推送。  
 3. 实现：每个可独立审查的任务完成后提交；**每个任务（或每个工作会话结束）推送 `origin/main`**。  
-4. 收尾：测试通过后**必须**重打冻结包并刷新桌面快捷方式（`scripts\build_windows.ps1`，停掉正在运行的 `Tasker.exe`，覆盖 `dist\Tasker\Tasker.exe`，`create_desktop_shortcut(..., overwrite=True)`）。不要把「源码已合入、exe 下次再打」留给用户。`STATUS.md` 把该功能标为完成并写「双击桌面 Tasker」。
+4. 收尾：测试通过后**必须**：`python scripts\bump_version.py`（每次用户可见更新 patch +1），同步 `CHANGELOG.md`、`README.md` 顶部版本、`STATUS.md`；运行 `scripts\release.ps1` 打包并发布到 `877881029/Tasker-releases`（只保留最近 5 版）；停掉本机 `Tasker.exe`，把 `dist\Tasker` 部署到 `%LOCALAPPDATA%\Programs\Tasker` 并刷新桌面快捷方式。不要把「源码已合入、exe 下次再打」留给用户。`STATUS.md` 把该功能标为完成并写「双击桌面 Tasker」。
 
 ## 3. 提交与推送
 

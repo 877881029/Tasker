@@ -1,275 +1,49 @@
 # Tasker 项目状态（AI 接手必读）
 
-最后更新：2026-10-12  
-Git：`main` 应与 `origin/main` 同步（https://github.com/877881029/Tasker ）。
+最后更新：2026-10-15　·　**当前版本 1.0.25**　·　Git：`main` 与 `origin/main` 同步（https://github.com/877881029/Tasker ）
 
+## 当前状态
 
-## 当前目标
+**1.0.25：数据安全、设置页、快速安装**（已完成 2026-10-15，已部署：双击桌面 Tasker；已发布到 Tasker-releases）
 
-**便捷功能包 10 项 + Esc 收托盘**（已完成 2026-10-12，`91d5610`，149 测试通过，已部署：双击桌面 Tasker）
-
-- DDL 提醒与托盘角标、全局快捷键快速记录、列表右键设 DDL、删除可撤销、已完成折叠、键盘全流程、搜索关键词、复制本周周报、开机自启、最新日志摘要；详情未打开时 Esc 隐藏到托盘（钉住则常驻）
-- 右上角 × 改为「日志摘要/简约」切换按钮（默认简约，设置存 settings.json）
-- 修复：粘贴自 PPT/Word 的 U+2028 行分隔符在只读视图被折叠成空格，现统一规范为换行（`b876872`）
-- 全局快捷键优先 Win+Alt+T，本机被系统占用，自动回退 Ctrl+Alt+T（托盘菜单显示实际组合）
-- 规格：`docs/superpowers/specs/2026-10-12-convenience-pack-design.md`
-- 计划：`docs/superpowers/plans/2026-10-12-convenience-pack.md`
-
-## 上一目标（已完成）
-
-**紧急任务 DDL 倒计时**（已完成 2026-10-12，`f7c9548`，122 测试通过，已部署：双击桌面 Tasker）
-
-- 详情设置 DDL；列表任务右侧倒计时胶囊 `03d-14h-57m`；紧急任务按 DDL 先后排序
-- 规格：`docs/superpowers/specs/2026-10-12-urgent-deadline-design.md`
-- 计划：`docs/superpowers/plans/2026-10-12-urgent-deadline.md`
-
-## 更早目标（已完成）
-
-**窗口拖拽、缩放与屏幕自适应**（已完成，冻结包已重建并部署；双击桌面 Tasker 即可使用）
-
-- 按窗口所在屏幕计算；屏幕增减/工作区/DPI 变化自动收回可见区
-- 展开详情不再被挤成 0 宽（空间不足时整窗右移、详情最小 360）；收起回原位
-- 详情空白处可拖动；双击标题栏/空白处铺满当前屏幕工作区，再双击还原；铺满时直角
-- `CornerOverlay` 抗锯齿圆角替代 1-bit 锯齿遮罩
-- 列表与详情之间 7px 分隔线可拖动（悬停变蓝），总宽不变，宽度仅内存记忆
-- 修复 QSS/CSS 中普通字符串误写 `}}`：此前 Qt 整体丢弃了 dock 样式表、状态胶囊与删除确认样式，日志 CSS 丢了最新时间戳蓝色与光标色
-- 测试：offscreen 平台改用 `tests/offscreen.json` 1920×1080 虚拟屏；全量 `111 passed`
-- 注意：pytest 不要加 `-p ...` 参数（QtWebEngine/Chromium 会解析进程命令行导致 GPU 初始化崩溃，退出码 -536870873）
-- 实现提交：`7d0a2d1`
-- 规格：`docs/superpowers/specs/2026-10-10-window-drag-resize-screen-design.md`
-- 计划：`docs/superpowers/plans/2026-10-10-window-drag-resize-screen.md`
-
-## 更早目标（已完成）
-
-**Copilot 主题与详情体验**（已完成）
-
-- 主题改为 Copilot App 浅色：侧栏/主区色阶 + 1px 分隔线、无边框任务行、幽灵图标按钮、蓝色焦点环、Segoe UI
-- 紧急度与完成合并为详情头部「状态胶囊 + 下拉菜单」，任务行右键同菜单；删除改为垃圾桶两步确认
-- 不加写入/保存/收起按钮，快捷键与数据格式不变；打开详情不再重建列表
-- 规格：`docs/superpowers/specs/2026-10-10-copilot-theme-detail-design.md`（替换旧合同 §2 主题锁）
-- 计划：`docs/superpowers/plans/2026-10-10-copilot-theme-detail.md`
-- 中文字体统一：`install_font_fallback()` 将 Segoe UI 回退到 Microsoft YaHei UI，避免日/繁字形混排
-- Python 3.12 全量测试 `101 passed`；150% DPI 原生截图验收通过
-- 部署：`%LOCALAPPDATA%\Programs\Tasker\Tasker.exe`；桌面 `Tasker.lnk` 已覆盖
-- 实现提交：`ad463f2`、`5b7c9be`（快速切换不再透出桌面；置顶图标改图钉）
-
-## 更早目标（已完成）
-
-**顶部工具栏表面精修**（已完成，冻结包已重建并部署）
-
-- 搜索框改为 38px 高、12px 圆角的 `CARD` 浅纸内嵌面，彻底移除 Windows 原生蓝色底线
-- 搜索聚焦态为完整 2px cobalt 圆角环；圆角外保持 `PAPER`，不再露出系统白色底板
-- 添加、置顶和隐藏统一为 36×36px、10px 圆角，并统一 hover/checked/pressed/focus 状态
-- 搜索、添加、置顶和隐藏全部使用同一笔画语言的 SVG，不再依赖系统字体字符
-- 保持锁定色板、shell/card 圆角、功能、快捷键、数据和公开接口不变
-- Python 3.12 全量测试 `93 passed`，退出码 0；150% DPI 原生截图验收通过
-- 部署：`%LOCALAPPDATA%\Programs\Tasker\Tasker.exe`；桌面 `Tasker.lnk` 已覆盖
-- 实现提交：`77ba4f5`、`6170ae0`（均已推送至 `origin/main`）
-- 规格：`docs/superpowers/specs/2026-09-23-toolbar-surface-polish-design.md`
-- 计划：`docs/superpowers/plans/2026-09-23-toolbar-surface-polish.md`
-- 产品与视觉事实：`PRODUCT.md`、`DESIGN.md`
+- 退出 / 注销前保存打开中的日志；删除进回收站；每日自动备份（文档\Tasker\backups，保留 7 份）
+- 设置窗口（齿轮按钮 / 托盘「设置…」）：通用开关、全部快捷键可改、功能说明、数据与备份
+- 只读日志链接可点击；删除未使用的 Markdown 预览代码
+- 发布仓库 `877881029/Tasker-releases`（保留最近 5 版）+ 一行安装 `irm .../latest/download/install.ps1 | iex`
+- 版本单一来源 `VERSION`；依赖锁定；新增 CHANGELOG、LICENSE（MIT）
+- 规格：`docs/superpowers/specs/2026-10-15-release-settings-safety-design.md`
+- 计划：`docs/superpowers/plans/2026-10-15-release-settings-safety.md`
 
 ## 下一步
 
-继续沿「桌边工作纸」北极星审查列表卡片的信息层级和详情页表面一致性；先出规格和原生对照图，再决定下一轮实现，功能与公开合同继续锁定。
-
-## 上一目标（已完成）
-
-**UI 成熟度打磨**（已完成，冻结包已重建并部署）
-
-- 日志状态、键盘/无障碍、空状态、托盘语义和两步删除确认已完成
-- Python 3.12 全量测试 `93 passed`，退出码 0
-- 部署：`%LOCALAPPDATA%\Programs\Tasker\Tasker.exe`
-
-## 上一目标（已完成）
-
-**纸窗四角对齐**（已完成，冻结包已重建）
-
-- 未铺满时 HWND 圆角遮罩贴齐整窗（16px，不再收 1px），去掉四角发黑/错位
-- 铺满工作区时仍清遮罩、圆角 0，四边四角可拉不变
-- 规格：`docs/superpowers/specs/2026-09-21-fill-resize-layout-design.md`
-
-## 下一步
-
-双击桌面 Tasker：折叠栏四个圆角应贴齐、不应发黑；铺满工作区后仍可从边角拉小。
-
-## 上一目标（已完成）
-
-**Ctrl+S 改回编辑器写入，不再从 Chromium 读正文**（已完成，冻结包已重建）
-
-- 真正原因：打字在 `contenteditable`，保存读不到页面；多次 JS/脏标记/快照补丁后 Ctrl+S 仍清空
-- 只读仍用 Chromium；Ctrl+I 切回 `JournalEditor`，保存读同一块编辑器（与原先能用的写入逻辑一致）
-- 规格：`docs/superpowers/specs/2026-09-17-detail-expand-journal-polish-design.md` 第 6 条
-
-## 下一步
-
-双击桌面 Tasker：打开详情，Ctrl+I 打几个字再 Ctrl+S，编辑区不应被清空，字应留在日志里。
-
-## 上一目标（已完成）
-
-**Ctrl+S 必须用输入过程中同步好的 Chromium 正文**（已完成，冻结包已重建）
-
-- 真正原因：字打在 Chromium 里，保存却在快捷键里 nested `runJavaScript`；这次读取经常是空的，隐藏编辑器仍是空时间戳，丢掉后看起来像没保存
-- 旧逻辑没问题是因为打字和保存都走 `QPlainTextEdit`；改成 contenteditable 之后保存不再读用户正在打的那个面
-- 写入时轮询页面行到 Python `live_rows`，Ctrl+S 先用这份快照
-- 规格：`docs/superpowers/specs/2026-09-17-detail-expand-journal-polish-design.md` 第 6 条
-
-## 下一步
-
-双击桌面 Tasker：打开详情，Ctrl+I 打「开始测试」再 Ctrl+S，这几个字应留在日志里。
-
-## 上一目标（已完成）
-
-**Ctrl+S 不得用空 DOM 把日志抹掉**（已完成，冻结包已重建）
-
-- 真正原因：保存把 Chromium 行整页写回；页面未排版时 `innerText` 全空，空时间戳再被丢掉，旧记录也从磁盘消失
-- 有正文的行才采用页面文字；整页空白或某行被读成空时，保留编辑器里已有内容
-- 规格：`docs/superpowers/specs/2026-09-17-detail-expand-journal-polish-design.md` 第 6 条
-
-## 下一步
-
-双击桌面 Tasker：打开已有记录的卡片，Ctrl+I 写入后再 Ctrl+S，旧内容应还在，刚打的字也应留下。
-
-## 上一目标（已完成）
-
-**Ctrl+S 必须收下详情里刚写的字**（已完成，冻结包已重建）
-
-- 真正原因：写入在 Chromium `contenteditable` 上，保存却只在 `_journalDirty` 为真时才把 DOM 写回隐藏编辑器；`loadFinished` 竞态下脏标记经常没亮
-- 保存时只要读到页面行就提交，不再看脏标记；JS 读不到行则保留编辑器模型，空时间戳仍在提交后再丢
-- 规格：`docs/superpowers/specs/2026-09-17-detail-expand-journal-polish-design.md` 第 6 条
-
-## 下一步
-
-双击桌面 Tasker：打开详情，Ctrl+I 写入后再 Ctrl+S，刚打的字应留在日志里，不应像没保存就退出编辑。
-
-## 上一目标（已完成）
-
-**写入态与只读共用 Chromium**（已完成，冻结包已重建）
-
-- 真正原因：Ctrl+I 切到 `QPlainTextEdit`，Qt 光栅化对不齐 WebEngine
-- 写入仍在 `QWebEngineView` 上 `contenteditable`，同一套 Candara 16px / 1.72 / INK
-
-## 下一步
-
-双击桌面 Tasker：Ctrl+I 后正文应与只读同一套字，不再变细变浅。
-
-## 上一目标（已完成）
-
-**写入态日志对齐只读 Chromium 字号**（已完成，冻结包已重建）
-
-- 编辑器正文 Candara 16px / 行高 1.72 / `#1c1915`；时间戳 13px、字重 600
-- 详情页不再用 12pt 把写入态压回去
-
-## 下一步
-
-双击桌面 Tasker：Ctrl+I 写入时正文和时间戳应与只读同样大、同样深。
-
-## 上一目标（已完成）
-
-**打开详情不挪任务栏；纸窗可拖可缩放**（已完成，冻结包已重建）
-
-- 规格：`docs/superpowers/specs/2026-09-17-dock-place-drag-resize-design.md`
-- 计划：`docs/superpowers/plans/2026-09-17-dock-place-drag-resize.md`
-- 点卡片：任务栏 x/y/宽/高不变，详情向左加宽（默认约两倍栏宽，之后记住）
-- 空白纸面拖整窗；四边四角缩放
-
-## 下一步
-
-双击桌面 Tasker：把坞拖到别处再点卡片，任务栏不应弹回初始位置；空白纸面可拖，边缘可缩放。
-
-## 上一目标（已完成）
-
-**只读日志改用 Reader 同一套 Chromium 渲染**（已完成，冻结包已重建）
-
-- 只读：`QWebEngineView` + `wrap_document_html`（Candara 16px / 行高 1.72 / `#1c1915`）
-- 时间戳一列 CSS grid（`7.75rem` + 正文 `minmax(0,1fr)`），折行不再挤进时间列
-- Ctrl+I 仍切回整篇 `JournalEditor`
-
-## 下一步
-
-双击桌面 Tasker：详情只读应与 Reader 文档同样字重、墨色；时间戳完整右对齐成一列，不应只剩「M」。
-
-## 上一目标（已完成）
-
-**只读日志时间戳对齐成一列**（已完成，冻结包已重建）
-
-- 一张表固定左列 118px；折行留在正文列，不再钻到时间下面
-
-## 下一步
-
-双击桌面 Tasker：时间戳应上下对齐，长句折行只在右侧。
-
-## 上一目标（已完成）
-
-**日志阅读态改用 Reader 文档 CSS**（冻结包已重建）
-
-- 只读：QTextBrowser + `document_style`（16px / 行高 1.72 / Candara / `#1c1915`）
-- Ctrl+I 仍切回整篇编辑器
-
-## 下一步
-
-双击桌面 Tasker：打开详情只读，正文应与 Reader 文档页同样深、同样大。
-
-## 上一目标（已完成）
-
-**日志正文对齐 Reader 墨色**（已完成，冻结包已重建）
-
-- 只读日志不再发灰：12pt Candara、行高 1.72、视口铺实纸色
-- 时间戳仍用 COBALT / MUTED，正文锁 `#1c1915`
-
-## 下一步
-
-双击桌面 Tasker：详情正文应与 Reader 文档一样深，不应发浅灰。
-
-## 上一目标（已完成）
-
-**详情日志展开与排版打磨**（冻结包已重建）
-
-- 规格：`docs/superpowers/specs/2026-09-17-detail-expand-journal-polish-design.md`
-- 点卡片从当前坞位置向左展开，轨道右缘不动
-- Ctrl+I 未写入则保存时丢掉空时间戳
-- 记录之间一空行；正文/时间戳统一 Candara/Calibri/Segoe UI
-
-## 下一步
-
-双击桌面 Tasker：拖开坞再点卡片，轨道不应右跳；空 Ctrl+I 后 Esc 不应留下时间戳。
-
-## 上一目标（已完成）
-
-**详情日志改成一整片编辑区（左时间、右正文）**（冻结包已重建）
-
-- 规格：`docs/superpowers/specs/2026-09-17-journal-single-editor-design.md`
-- 计划：`docs/superpowers/plans/2026-09-17-journal-single-editor.md`
-- 阅读区一个折行编辑器，左侧时间 gutter；Ctrl+I 仍新开空记录，之后整篇可改
-
-## 下一步
-
-双击桌面 Tasker：打开详情，Ctrl+I 后应能改旧记录；长文折行不再切半行。
-
-## 上一目标（已完成）
-
-**关闭详情保持坞位置；日志条目间距收成约两行**（冻结包已重建）
-
-- Esc 收起详情后，坞回到打开详情前的坐标，不再弹回屏幕右侧初始位
-- 两条日志之间的空隙约为两行字高，编辑框按内容高度收缩
-
-## 上一目标（已完成）
-
-**UI 合同已锁死并入库**
-
-## 固定收尾
-
-用户可见更新必须重打 `dist\Tasker\Tasker.exe` 并覆盖桌面快捷方式。
+- 无进行中任务。候选：发布包瘦身（去掉 WebEngine devtools 资源约 80 MB）、CI 自动跑测试。
+
+## 每次更新必做（固定收尾）
+
+1. `python scripts\bump_version.py`（patch +1），更新 `CHANGELOG.md`、`README.md` 顶部版本、本文件。
+2. 全量测试：`.\.venv\Scripts\python.exe -m pytest -q`（不要加 `-p`）。
+3. 打包并发布：`.\scripts\release.ps1`（含打包；只保留最近 5 个 Release）。
+4. 本机部署：停掉 `%LOCALAPPDATA%\Programs\Tasker\Tasker.exe`，`robocopy dist\Tasker` 过去，刷新桌面快捷方式。
+5. 提交并推送 `origin/main`（账号 `877881029`）。
 
 ## 背景
 
-Tasker 是 Windows 桌面个人工作台。数据 `%LOCALAPPDATA%\Tasker\tasks\`。远程 https://github.com/877881029/Tasker
+Tasker 是 Windows 桌面个人任务 + 工作日志。数据 `%LOCALAPPDATA%\Tasker\tasks\*.md`。UI 合同：`docs/superpowers/specs/2026-09-15-ui-contract-lock.md`。
 
-## 已完成
+## 历史
 
-- v1、纸色坞、单实例、气泡详情、md 日志
-- 2026-09-15：托盘工作台；UI 主题与接口合同锁死
+详见 `CHANGELOG.md` 与 `docs/superpowers/specs/`。要点：
+
+- 2026-10-12：紧急任务 DDL；便捷功能包 10 项；摘要/简约切换；粘贴段落修复
+- 2026-10-10：Copilot 浅色主题与详情体验；窗口拖动/缩放/屏幕自适应
+- 2026-09：托盘工作台、单实例、Markdown 存储、日志单编辑器、UI 合同锁定
+
+## 已知注意事项
+
+- pytest 不要加 `-p ...`：QtWebEngine 解析命令行会崩（退出码 -536870873）。
+- 打包路径过长：`release.ps1` 自动用 `subst` 短盘符构建。
+- 本机 `Win+Alt+T` 被系统占用，快速记录回退为 `Ctrl+Alt+T`（可在设置里改）。
 
 ## 阻塞项
 
-- 无。`origin/main` 用 GitHub 账号 `877881029` 推送（不要用 `runqyang_amdeng`）。
+- 无。推送用 GitHub 账号 `877881029`（环境里有 amdeng 的 `GH_TOKEN` 时先清掉并 `gh auth switch -u 877881029`）。
