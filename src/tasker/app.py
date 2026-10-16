@@ -32,6 +32,7 @@ class TaskerApp:
         qapp.aboutToQuit.connect(self.dock.save_open_detail)
         qapp.commitDataRequest.connect(lambda _manager: self.dock.save_open_detail())
         QTimer.singleShot(3000, self._daily_backup)
+        QTimer.singleShot(1500, self.dock.prepare_settings)
 
     def _daily_backup(self) -> None:
         from tasker.safety import daily_backup, default_backup_dir

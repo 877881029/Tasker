@@ -1027,14 +1027,26 @@ class DockWindow(QWidget):
         if self._detail is not None:
             self._detail.set_shortcut_keys(defaults["write"], defaults["save"])
 
-    def open_settings(self, section: str = "general") -> None:
+    def prepare_settings(self) -> None:
+        """Build the settings window ahead of time (called when the app is idle)."""
         from tasker.shell.settings_window import SettingsWindow
 
+        if self._settings is not None:
+            return
+        self._settings = SettingsWindow(self)
+        self._settings.ensure_built("general")
+        self._settings.ensurePolished()
+        self._settings.layout().activate()
+        self._settings.winId()
+        QTimer.singleShot(0, self._settings.build_next_idle)
+
+    def open_settings(self, section: str = "general") -> None:
         if self._settings is None:
-            self._settings = SettingsWindow(self)
-            self._settings.center_on(self)
+            self.prepare_settings()
         else:
             self._settings.sync()
+        if not self._settings.isVisible():
+            self._settings.center_on(self)
         self._settings.show_section(section)
         self._settings.show()
         self._settings.raise_()

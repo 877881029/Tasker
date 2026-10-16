@@ -128,6 +128,8 @@ def test_settings_toggles_drive_app(qtbot, tmp_path, monkeypatch):
     assert dock.summary_mode() and dock.view_btn.isChecked()
     win.toggles["reminders"].click()
     assert get_setting(store.root, "reminders") is False
+    assert "auto_backup" not in win.toggles  # data page is built lazily
+    win.build_all()
     win.toggles["auto_backup"].click()
     assert get_setting(store.root, "auto_backup") is False
     dock.view_btn.click()
@@ -223,3 +225,14 @@ def test_settings_sections_render(qtbot, tmp_path, monkeypatch, section):
     dock.open_settings(section)
     qtbot.addWidget(dock._settings)
     assert dock._settings.current_section() == section
+
+
+def test_settings_prebuild_builds_remaining_pages_when_idle(qtbot, tmp_path, monkeypatch):
+    dock, _store, _items = _dock(qtbot, tmp_path, monkeypatch)
+    dock.prepare_settings()
+    win = dock._settings
+    qtbot.addWidget(win)
+    assert not win.isVisible() and "general" in win._built
+    qtbot.waitUntil(lambda: win._built == {"general", "shortcuts", "features", "data"}, timeout=3000)
+    dock.open_settings("data")
+    assert win.isVisible() and win.current_section() == "data"

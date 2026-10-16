@@ -1,6 +1,6 @@
 # Tasker
 
-**当前版本：1.0.26**　·　[下载 / 更新日志](https://github.com/877881029/Tasker-releases/releases)　·　[CHANGELOG](CHANGELOG.md)
+**当前版本：1.0.27**　·　[下载 / 更新日志](https://github.com/877881029/Tasker-releases/releases)　·　[CHANGELOG](CHANGELOG.md)
 
 Windows 桌面上的轻量任务 + 工作日志。窗口贴在屏幕一侧列出当前任务，点开在左侧写带时间戳的日志；紧急任务可设 DDL 倒计时。数据是本机 Markdown 文件，不联网、不需要账号。
 

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from PySide6.QtCore import QPoint, QRectF, QSize, Qt, QUrl, Signal
+from PySide6.QtCore import QPoint, QRectF, QSize, Qt, QTimer, QUrl, Signal
 from PySide6.QtGui import (
     QColor,
     QDesktopServices,
@@ -11,6 +11,7 @@ from PySide6.QtGui import (
     QMouseEvent,
     QPainter,
     QPainterPath,
+    QPalette,
     QPen,
 )
 from PySide6.QtWidgets import (
@@ -102,7 +103,10 @@ def _label(text: str, *, size: int = 14, color: str = INK, weight: int = 400, wr
     label = QLabel(text)
     label.setWordWrap(wrap)
     label.setFont(ui_font(size, weight))
-    label.setStyleSheet(f"color:{color};background:transparent;")
+    # Palette instead of a per-widget stylesheet: per-label sheets made polishing slow.
+    palette = label.palette()
+    palette.setColor(QPalette.ColorRole.WindowText, QColor(color))
+    label.setPalette(palette)
     return label
 
 
@@ -204,6 +208,9 @@ class SettingRow(QWidget):
         row.setSpacing(24)
         text = QVBoxLayout()
         text.setSpacing(2)
+        # Attach the text column first so labels are parented before any visibility
+        # change; toggling an unparented QLabel turns it into a native top-level window.
+        row.addLayout(text, 1)
         self.title = _label(title, size=14)
         text.addWidget(self.title)
         self.desc = _label(desc, size=13, color=MUTED, wrap=wrap)
@@ -211,12 +218,11 @@ class SettingRow(QWidget):
             self.desc.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
             self.desc.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
             self.desc.setToolTip(desc)
-        self.desc.setVisible(bool(desc))
         text.addWidget(self.desc)
+        self.desc.setVisible(bool(desc))
         self.error = _label("", size=13, color=URGENT_DOT)
-        self.error.hide()
         text.addWidget(self.error)
-        row.addLayout(text, 1)
+        self.error.hide()
         self.control = control
         if control is not None:
             row.addWidget(control, 0, Qt.AlignmentFlag.AlignVCenter)
@@ -380,10 +386,9 @@ class SettingsWindow(QWidget):
             nav_box.addWidget(button)
             self.nav_buttons[key] = button
             page = Page(tr(title), tr(description))
-            getattr(self, f"_build_{key}")(page)
-            page.finish()
             self.pages.addWidget(page)
             self.pages_by_key[key] = page
+        self._built: set[str] = set()
         nav_box.addStretch(1)
 
         self.header_title = _label("", size=16, weight=600)
@@ -589,7 +594,28 @@ class SettingsWindow(QWidget):
 
     # ---- behaviour --------------------------------------------------------
 
+    def ensure_built(self, key: str) -> None:
+        if key in self._built:
+            return
+        self._built.add(key)
+        page = self.pages_by_key[key]
+        getattr(self, f"_build_{key}")(page)
+        page.finish()
+
+    def build_all(self) -> None:
+        for key, *_rest in self.SECTIONS:
+            self.ensure_built(key)
+
+    def build_next_idle(self) -> None:
+        """Build one remaining page per event-loop turn so the UI never stalls."""
+        pending = [key for key, *_rest in self.SECTIONS if key not in self._built]
+        if pending:
+            self.ensure_built(pending[0])
+            if len(pending) > 1:
+                QTimer.singleShot(0, self.build_next_idle)
+
     def show_section(self, key: str) -> None:
+        self.ensure_built(key)
         self.nav_buttons[key].setChecked(True)
         page = self.pages_by_key[key]
         self.pages.setCurrentWidget(page)
@@ -601,6 +627,8 @@ class SettingsWindow(QWidget):
 
     def apply_search(self, text: str) -> None:
         needle = text.strip().casefold()
+        if needle:
+            self.build_all()
         first = None
         for key, page in self.pages_by_key.items():
             shown = page.filter(needle)
@@ -619,13 +647,17 @@ class SettingsWindow(QWidget):
             ("autostart", autostart.is_enabled()),
             ("auto_backup", bool(get_setting(self._root, "auto_backup"))),
         ):
-            toggle = self.toggles[key]
+            toggle = self.toggles.get(key)
+            if toggle is None:
+                continue
             toggle.blockSignals(True)
             toggle.setChecked(value)
             toggle.blockSignals(False)
             toggle.update()
         mapping = self._dock.shortcut_keys()
         for action in SHORTCUTS:
+            if action not in self.shortcut_fields:
+                continue
             self._paint_field(action, mapping[action])
             self.rows[f"key:{action}"].show_error("")
 

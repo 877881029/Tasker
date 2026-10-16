@@ -1,8 +1,11 @@
 # Tasker 项目状态（AI 接手必读）
 
-最后更新：2026-10-16　·　**当前版本 1.0.26**　·　Git：`main` 与 `origin/main` 同步（https://github.com/877881029/Tasker ）
+最后更新：2026-10-16　·　**当前版本 1.0.27**　·　Git：`main` 与 `origin/main` 同步（https://github.com/877881029/Tasker ）
 
 ## 当前状态
+
+**1.0.27：设置秒开**（已完成 2026-10-16，已部署、已发布）— 打开设置 ~4.4 s → ~0.27 s（预建后）/ ~1 s（启动后立即点）。根因：SettingRow 在挂上父布局前调用 setVisible，标签变成临时顶层原生窗口（每个约 80 ms × 33）。另：标签用调色板、页面懒构建 + 空闲逐页构建、`TaskerApp` 启动 1.5 s 后 `prepare_settings()`。
+
 
 **1.0.26：设置页对齐 Copilot + 中英文切换**（已完成 2026-10-16，已部署：双击桌面 Tasker；已发布到 Tasker-releases）
 
