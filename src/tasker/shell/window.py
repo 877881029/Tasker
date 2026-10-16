@@ -36,6 +36,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from tasker.i18n import tr
 from tasker.deadline import build_deadline_menu, countdown_text, deadline_label
 from tasker.reminders import ReminderTracker, badge_text, overdue_count
 from tasker.report import summary_line, weekly_report
@@ -269,7 +270,7 @@ class SplitHandle(QWidget):
         self.setObjectName("notch")
         self.setFixedWidth(NOTCH_WIDTH)
         self.setCursor(Qt.CursorShape.SplitHCursor)
-        self.setToolTip("拖动调整宽度")
+        self.setToolTip(tr("拖动调整宽度"))
 
     def paintEvent(self, event) -> None:
         painter = QPainter(self)
@@ -643,15 +644,15 @@ class ItemCard(QWidget):
             f"border-radius:{radius}px;}}"
         )
         text = item.title.strip()
-        self.title.setText(text or "标题")
+        self.title.setText(text or tr("标题"))
         color = INK if text and item.state != "done" else MUTED
         self.title.setStyleSheet(f"color:{color};font-size:14px;")
-        state = STATE_LABEL[item.state]
-        name = text or "无标题"
-        self.setAccessibleName(f"{state}任务：{name}")
-        self.setAccessibleDescription("按 Enter 或空格打开详情，菜单键或右键改状态")
-        self.setToolTip(f"{state} · {name} · 右键改状态")
-        self.importance.setAccessibleName(f"任务状态：{state}")
+        state = tr(STATE_LABEL[item.state])
+        name = text or tr("无标题")
+        self.setAccessibleName(tr("{state}任务：{name}", state=state, name=name))
+        self.setAccessibleDescription(tr("按 Enter 或空格打开详情，菜单键或右键改状态"))
+        self.setToolTip(tr("{state} · {name} · 右键改状态", state=state, name=name))
+        self.importance.setAccessibleName(tr("任务状态：{label}", label=state))
         line = summary_line(item.status_pin)
         self.summary.setFullText(line)
         self.summary.setVisible(bool(line) and self._summary_on)
@@ -666,7 +667,7 @@ class ItemCard(QWidget):
         self.deadline_pill.setText(text)
         self.deadline_pill.setStyleSheet(f"QLabel#deadlinePill{{{ddl_pill_style(tone)}}}")
         self.deadline_pill.setToolTip(f"DDL {deadline_label(self._deadline)}")
-        self.deadline_pill.setAccessibleName(f"截止倒计时 {text}")
+        self.deadline_pill.setAccessibleName(tr("截止倒计时 {text}", text=text))
         self.deadline_pill.setProperty("tone", tone)
         self.deadline_pill.show()
 
@@ -751,10 +752,10 @@ class DockWindow(QWidget):
         self.search = SearchLineEdit()
         self.search.setObjectName("search")
         self.search.setFrame(False)
-        self.search.setPlaceholderText("查找任务或日志…")
-        self.search.setToolTip(SEARCH_TIP)
+        self.search.setPlaceholderText(tr("查找任务或日志…"))
+        self.search.setToolTip(tr(SEARCH_TIP))
         self.search.on_down = self._focus_first_card
-        self.search.setAccessibleName("搜索事项")
+        self.search.setAccessibleName(tr("搜索事项"))
         self.search.setFixedHeight(34)
         search_icon = resource_path("assets", "icons", "search.svg")
         if search_icon.exists():
@@ -772,8 +773,8 @@ class DockWindow(QWidget):
             self.add_btn.setIcon(QIcon(str(add_icon)))
             self.add_btn.setIconSize(QSize(16, 16))
         self.add_btn.setFixedSize(32, 32)
-        self.add_btn.setToolTip("新建事项")
-        self.add_btn.setAccessibleName("新建事项")
+        self.add_btn.setToolTip(tr("新建事项"))
+        self.add_btn.setAccessibleName(tr("新建事项"))
         self.add_btn.clicked.connect(self._add)
         self.pin_btn = QToolButton()
         self.pin_btn.setObjectName("pinBtn")
@@ -788,8 +789,8 @@ class DockWindow(QWidget):
             self.pin_btn.setIcon(icon)
             self.pin_btn.setIconSize(QSize(16, 16))
         self.pin_btn.setFixedSize(32, 32)
-        self.pin_btn.setToolTip("钉在其它窗口上面")
-        self.pin_btn.setAccessibleName("置顶窗口")
+        self.pin_btn.setToolTip(tr("钉在其它窗口上面"))
+        self.pin_btn.setAccessibleName(tr("置顶窗口"))
         self.pin_btn.setCheckable(True)
         self.pin_btn.toggled.connect(self._toggle_pin)
         self.view_btn = QToolButton()
@@ -805,7 +806,7 @@ class DockWindow(QWidget):
             self.view_btn.setIconSize(QSize(16, 16))
         self.view_btn.setFixedSize(32, 32)
         self.view_btn.setCheckable(True)
-        self.view_btn.setAccessibleName("显示日志摘要")
+        self.view_btn.setAccessibleName(tr("显示日志摘要"))
         self._show_summary = bool(get_setting(store.root, "show_summary"))
         self.view_btn.setChecked(self._show_summary)
         self._paint_view_btn()
@@ -817,8 +818,8 @@ class DockWindow(QWidget):
             self.settings_btn.setIcon(QIcon(str(gear)))
             self.settings_btn.setIconSize(QSize(16, 16))
         self.settings_btn.setFixedSize(32, 32)
-        self.settings_btn.setToolTip("设置：功能说明、快捷键、数据与备份")
-        self.settings_btn.setAccessibleName("设置")
+        self.settings_btn.setToolTip(tr("设置：功能说明、快捷键、数据与备份"))
+        self.settings_btn.setAccessibleName(tr("设置"))
         self.settings_btn.clicked.connect(lambda _c=False: self.open_settings())
         header.addWidget(self.search, 1)
         header.addSpacing(4)
@@ -922,21 +923,21 @@ class DockWindow(QWidget):
         self.tray.setToolTip("Tasker")
         menu = style_menu(QMenu())
         menu.setObjectName("trayMenu")
-        show_action = menu.addAction("显示")
+        show_action = menu.addAction(tr("显示"))
         show_action.triggered.connect(self.show_from_tray)
-        self.capture_action = menu.addAction("快速记录")
+        self.capture_action = menu.addAction(tr("快速记录"))
         self.capture_action.triggered.connect(self.quick_capture)
-        self.report_action = menu.addAction("复制本周周报")
+        self.report_action = menu.addAction(tr("复制本周周报"))
         self.report_action.triggered.connect(self.copy_weekly_report)
-        self.settings_action = menu.addAction("设置…")
+        self.settings_action = menu.addAction(tr("设置…"))
         self.settings_action.triggered.connect(lambda _c=False: self.open_settings())
         menu.addSeparator()
-        self.autostart_action = menu.addAction("开机自启")
+        self.autostart_action = menu.addAction(tr("开机自启"))
         self.autostart_action.setCheckable(True)
         self.autostart_action.toggled.connect(self._toggle_autostart)
         menu.aboutToShow.connect(self._sync_autostart)
         menu.addSeparator()
-        quit_action = menu.addAction("退出")
+        quit_action = menu.addAction(tr("退出"))
         quit_action.triggered.connect(self._quit_app)
         self.tray.setContextMenu(menu)
         self.tray.activated.connect(self._tray_activated)
@@ -960,9 +961,9 @@ class DockWindow(QWidget):
 
     def _paint_view_btn(self) -> None:
         if self._show_summary:
-            self.view_btn.setToolTip("切换为简约列表（只显示标题）")
+            self.view_btn.setToolTip(tr("切换为简约列表（只显示标题）"))
         else:
-            self.view_btn.setToolTip("显示最新日志摘要")
+            self.view_btn.setToolTip(tr("显示最新日志摘要"))
 
     def _setup_shortcuts(self) -> None:
         bindings = {
@@ -1002,7 +1003,7 @@ class DockWindow(QWidget):
             if self.hotkey is not None:
                 label = self.hotkey.register_text(keys)
                 if not label:
-                    return f"{keys} 已被其它程序占用，请换一个组合"
+                    return tr("{keys} 已被其它程序占用，请换一个组合", keys=keys)
                 self.set_hotkey_label(label)
         elif scope == "dock":
             self._shortcut_by_action[action].setKey(QKeySequence(keys))
@@ -1031,6 +1032,7 @@ class DockWindow(QWidget):
 
         if self._settings is None:
             self._settings = SettingsWindow(self)
+            self._settings.center_on(self)
         else:
             self._settings.sync()
         self._settings.show_section(section)
@@ -1061,7 +1063,9 @@ class DockWindow(QWidget):
 
     def set_hotkey_label(self, label: str) -> None:
         self.hotkey_label = label
-        self.capture_action.setText(f"快速记录（{label}）" if label else "快速记录")
+        self.capture_action.setText(
+            tr("快速记录（{label}）", label=label) if label else tr("快速记录")
+        )
 
     def quick_capture(self) -> None:
         if self._quick is None:
@@ -1075,18 +1079,18 @@ class DockWindow(QWidget):
         state = "urgent" if urgent else "pending"
         item = self._store.save(_replace(draft, title=title, state=state, resume_state=state))
         self.refresh()
-        self._notify("已记录", f"{STATE_LABEL[state]} · {item.title}")
+        self._notify(tr("已记录"), f"{tr(STATE_LABEL[state])} · {item.title}")
 
     def _notify(self, title: str, body: str) -> None:
         if self.isVisible():
-            self.toast.show_message(f"{title}：{body}", ms=2500)
+            self.toast.show_message(tr("{title}：{body}", title=title, body=body), ms=2500)
         elif QSystemTrayIcon.isSystemTrayAvailable():
             self.tray.showMessage(title, body, QSystemTrayIcon.MessageIcon.Information, 3000)
 
     def copy_weekly_report(self) -> None:
         text, count = weekly_report(self._store.list_visible(""))
         QGuiApplication.clipboard().setText(text)
-        self._notify("已复制本周周报", f"{count} 个任务")
+        self._notify(tr("已复制本周周报"), tr("{count} 个任务", count=count))
 
     def _sync_autostart(self) -> None:
         self.autostart_action.blockSignals(True)
@@ -1122,7 +1126,7 @@ class DockWindow(QWidget):
 
     def _update_badge(self, count: int) -> None:
         text = badge_text(count)
-        self.tray.setToolTip(f"Tasker · {count} 个任务已超期" if count else "Tasker")
+        self.tray.setToolTip(tr("Tasker · {count} 个任务已超期", count=count) if count else "Tasker")
         if text == self._badge:
             return
         self._badge = text
@@ -1173,6 +1177,21 @@ class DockWindow(QWidget):
     def save_open_detail(self) -> None:
         if self._detail is not None and self._detail.isVisible():
             self._detail.save_all()
+
+    def restart_app(self) -> None:
+        """Save, start a fresh Tasker that waits for this one to exit, then quit."""
+        import sys
+
+        from PySide6.QtCore import QProcess
+
+        from tasker.__main__ import _launch_target
+
+        self.save_open_detail()
+        program, args = _launch_target()
+        if not getattr(sys, "frozen", False) and program != sys.executable:
+            args = ()
+        QProcess.startDetached(program, [*args, "--restart"])
+        self._quit_app()
 
     def _quit_app(self) -> None:
         self.save_open_detail()
@@ -1511,11 +1530,11 @@ class DockWindow(QWidget):
             empty.setAlignment(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop)
             empty.setWordWrap(True)
             if query.strip():
-                empty.setText("没有找到匹配事项\n换个关键词试试")
-                empty.setAccessibleName("没有找到匹配事项")
+                empty.setText(tr("没有找到匹配事项\n换个关键词试试"))
+                empty.setAccessibleName(tr("没有找到匹配事项"))
             else:
-                empty.setText("还没有事项\n点 + 开始记录")
-                empty.setAccessibleName("还没有事项")
+                empty.setText(tr("还没有事项\n点 + 开始记录"))
+                empty.setAccessibleName(tr("还没有事项"))
             self.list_layout.addWidget(empty)
             self._arm_frame()
             return
@@ -1532,8 +1551,10 @@ class DockWindow(QWidget):
         if done:
             toggle = QToolButton()
             toggle.setObjectName("doneToggle")
-            toggle.setText(f"已完成 ({len(done)})  {'▾' if show_done else '▸'}")
-            toggle.setAccessibleName(f"已完成 {len(done)} 项，{'收起' if show_done else '展开'}")
+            toggle.setText(tr("已完成 ({count})  {arrow}", count=len(done), arrow="▾" if show_done else "▸"))
+            toggle.setAccessibleName(
+                tr("已完成 {count} 项，收起" if show_done else "已完成 {count} 项，展开", count=len(done))
+            )
             toggle.setCursor(Qt.CursorShape.PointingHandCursor)
             toggle.setStyleSheet(
                 f"QToolButton#doneToggle{{background:transparent;color:{MUTED};border:none;"
@@ -1629,8 +1650,8 @@ class DockWindow(QWidget):
         if not raw:
             return
         self._undo = (item_id, raw)
-        name = title or "无标题"
-        self.toast.show_message(f"已删除「{name}」", "撤销", self.undo_delete)
+        name = title or tr("无标题")
+        self.toast.show_message(tr("已删除「{name}」", name=name), tr("撤销"), self.undo_delete)
 
     def undo_delete(self) -> None:
         if self._undo is None or not self.toast.isVisibleTo(self.rail):

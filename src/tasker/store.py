@@ -43,9 +43,18 @@ class Item:
 DEADLINE_FORMAT = "%Y-%m-%dT%H:%M"
 
 SEARCH_KEYWORDS = ("紧急", "普通", "已完成", "完成", "超期", "今天", "ddl")
+KEYWORD_ALIASES = {
+    "urgent": "紧急",
+    "normal": "普通",
+    "pending": "普通",
+    "done": "已完成",
+    "overdue": "超期",
+    "today": "今天",
+}
 
 
 def matches_keyword(item: Item, needle: str, now: datetime) -> bool:
+    needle = KEYWORD_ALIASES.get(needle, needle)
     if needle == "紧急":
         return item.state == "urgent"
     if needle == "普通":

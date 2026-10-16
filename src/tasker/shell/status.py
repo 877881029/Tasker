@@ -6,6 +6,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QAction, QActionGroup
 from PySide6.QtWidgets import QMenu, QWidget
 
+from tasker.i18n import tr
 from tasker.store import Item, Store
 from tasker.theme import STATE_LABEL, menu_style, ui_font
 
@@ -47,7 +48,7 @@ def build_status_menu(
     group = QActionGroup(menu)
     group.setExclusive(True)
     for state in STATUS_ORDER:
-        action = QAction(STATE_LABEL[state], menu)
+        action = QAction(tr(STATE_LABEL[state]), menu)
         action.setCheckable(True)
         action.setChecked(state == current)
         action.setData(state)

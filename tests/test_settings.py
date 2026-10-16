@@ -145,7 +145,7 @@ def test_rebind_dock_and_detail_shortcuts(qtbot, tmp_path, monkeypatch):
     assert win.current_section() == "shortcuts"
     win._capture("new", "Ctrl+Shift+N")
     assert dock._shortcut_by_action["new"].key() == QKeySequence("Ctrl+Shift+N")
-    assert win.shortcut_fields["new"].text() == "Ctrl+Shift+N"
+    assert win.shortcut_fields["new"].text() == "Ctrl + Shift + N"
     win._capture("new", "Ctrl+F")
     assert "冲突" in win.rows["key:new"].error.text()
     assert dock.shortcut_keys()["new"] == "Ctrl+Shift+N"

@@ -4,6 +4,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 
+from tasker.i18n import tr
 from tasker.deadline import countdown_text, deadline_label
 from tasker.store import Item
 
@@ -33,7 +34,7 @@ def badge_text(count: int) -> str:
 
 
 def _name(item: Item) -> str:
-    return item.title.strip() or "无标题"
+    return item.title.strip() or tr("无标题")
 
 
 class ReminderTracker:
@@ -62,7 +63,7 @@ class ReminderTracker:
                 out.append(
                     Reminder(
                         "overdue",
-                        "已超期",
+                        tr("已超期"),
                         f"{_name(item)} · DDL {deadline_label(due, now)}",
                         item.id,
                     )
@@ -70,11 +71,13 @@ class ReminderTracker:
             elif due - now <= SOON_WINDOW and soon_key not in self._sent:
                 self._sent.add(soon_key)
                 left, _tone = countdown_text(due, now)
-                out.append(Reminder("soon", "即将截止", f"{_name(item)} · 剩余 {left}", item.id))
+                out.append(
+                    Reminder("soon", tr("即将截止"), tr("{name} · 剩余 {left}", name=_name(item), left=left), item.id)
+                )
         if not self._primed and overdue_at_start:
             out.insert(
                 0,
-                Reminder("summary", "Tasker", f"有 {overdue_at_start} 个任务已超期"),
+                Reminder("summary", "Tasker", tr("有 {count} 个任务已超期", count=overdue_at_start)),
             )
         self._primed = True
         return out

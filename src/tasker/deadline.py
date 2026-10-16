@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
     QWidgetAction,
 )
 
+from tasker.i18n import tr
 from tasker.theme import CARD, COBALT, INK, LINE_STRONG, MUTED, ui_font
 
 SOON = timedelta(hours=24)
@@ -31,7 +32,7 @@ def countdown_text(deadline: datetime, now: datetime | None = None) -> tuple[str
     moment = now or datetime.now()
     left = deadline - moment
     if left.total_seconds() < 0:
-        return f"超期 {format_countdown(-left)}", "overdue"
+        return tr("超期 {left}", left=format_countdown(-left)), "overdue"
     return format_countdown(left), "soon" if left <= SOON else "normal"
 
 
@@ -48,11 +49,11 @@ def deadline_presets(now: datetime | None = None) -> list[tuple[str, datetime]]:
     options: list[tuple[str, datetime]] = []
     today = day.replace(hour=18)
     if today > moment:
-        options.append(("今天 18:00", today))
-    options.append(("明天 18:00", (day + timedelta(days=1)).replace(hour=18)))
-    options.append(("3 天后 18:00", (day + timedelta(days=3)).replace(hour=18)))
+        options.append((tr("今天 18:00"), today))
+    options.append((tr("明天 18:00"), (day + timedelta(days=1)).replace(hour=18)))
+    options.append((tr("3 天后 18:00"), (day + timedelta(days=3)).replace(hour=18)))
     monday = day + timedelta(days=7 - day.weekday())
-    options.append(("下周一 09:00", monday.replace(hour=9)))
+    options.append((tr("下周一 09:00"), monday.replace(hour=9)))
     return options
 
 
@@ -75,7 +76,7 @@ def _custom_editor(
     layout = QVBoxLayout(box)
     layout.setContentsMargins(10, 4, 10, 6)
     layout.setSpacing(4)
-    hint = QLabel("自定义：滚轮或方向键调整，回车确定")
+    hint = QLabel(tr("自定义：滚轮或方向键调整，回车确定"))
     hint.setStyleSheet(f"color:{MUTED};font-size:12px;background:transparent;")
     edit = QDateTimeEdit(box)
     edit.setObjectName("deadlineEdit")
@@ -127,7 +128,7 @@ def build_deadline_menu(
     menu.addSeparator()
     menu.addAction(_custom_editor(current, on_pick, menu))
     menu.addSeparator()
-    clear = menu.addAction("清除 DDL")
+    clear = menu.addAction(tr("清除 DDL"))
     clear.setEnabled(current is not None)
     clear.triggered.connect(lambda _checked=False: on_pick(None))
     return menu

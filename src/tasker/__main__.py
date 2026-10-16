@@ -64,9 +64,23 @@ def main(argv: list[str] | None = None) -> int:
         if holder:
             holder[0].show_dock()
 
-    if not instance.become_server(activate):
+    became = instance.become_server(activate)
+    if not became and "--restart" in argv[1:]:
+        # The previous instance is still shutting down; give it a few seconds.
+        import time
+
+        deadline = time.monotonic() + 8
+        while not became and time.monotonic() < deadline:
+            time.sleep(0.2)
+            became = instance.become_server(activate)
+    if not became:
         instance.ping_existing()
         return 0
+    from tasker.i18n import set_language
+    from tasker.paths import data_dir
+    from tasker.settings import get_setting
+
+    set_language(str(get_setting(data_dir(), "language")))
     app = TaskerApp(qapp)
     holder.append(app)
     app.show_dock()

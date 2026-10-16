@@ -3,12 +3,15 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from tasker.i18n import tr
+
 FILE_NAME = "settings.json"
 
 DEFAULTS: dict = {
     "show_summary": False,
     "reminders": True,
     "auto_backup": True,
+    "language": "zh",
 }
 
 # action -> (label, description, default key, scope)
@@ -87,10 +90,10 @@ def shortcut_conflict(mapping: dict[str, str], action: str, keys: str) -> str | 
     parts = keys.split("+")
     if len(parts) == 1:
         if parts[0] in RESERVED_KEYS:
-            return f"{keys} 已固定用于列表操作"
+            return tr("{keys} 已固定用于列表操作", keys=keys)
         if not (parts[0].startswith("F") and parts[0][1:].isdigit()):
-            return "需要配合 Ctrl / Alt / Shift / Win 使用"
+            return tr("需要配合 Ctrl / Alt / Shift / Win 使用")
     for other, current in mapping.items():
         if other != action and current and current.casefold() == keys.casefold():
-            return f"与「{SHORTCUTS[other][0]}」冲突"
+            return tr("与「{name}」冲突", name=tr(SHORTCUTS[other][0]))
     return None

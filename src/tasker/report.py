@@ -4,6 +4,7 @@ import re
 from collections.abc import Iterable
 from datetime import date, datetime, timedelta
 
+from tasker.i18n import tr
 from tasker.deadline import deadline_label
 from tasker.journal import STAMP_LINE, parse_journal
 from tasker.store import Item
@@ -15,7 +16,7 @@ _STAMP = re.compile(r"^(\d{2})(\d{2})(\d{2})\.(\d{1,2})(AM|PM)$")
 
 def summary_line(text: str) -> str:
     for raw in (text or "").splitlines():
-        line = _IMAGE.sub("[图片]", raw).strip()
+        line = _IMAGE.sub(tr("[图片]"), raw).strip()
         if line:
             return line
     return ""
@@ -40,7 +41,7 @@ def week_bounds(now: datetime) -> tuple[date, date]:
 def _entry_lines(stamp: str, text: str, when: date) -> list[str]:
     match = _STAMP.match(stamp.strip())
     hour = f"{match.group(4)}{match.group(5)}" if match else ""
-    rows = [_IMAGE.sub("[图片]", line).rstrip() for line in text.strip("\n").splitlines()]
+    rows = [_IMAGE.sub(tr("[图片]"), line).rstrip() for line in text.strip("\n").splitlines()]
     rows = [row for row in rows if row.strip()]
     if not rows:
         return []
@@ -64,17 +65,17 @@ def weekly_report(items: Iterable[Item], now: datetime | None = None) -> tuple[s
             lines.extend(_entry_lines(stamp, text, when))
         if not lines or item.state not in sections:
             continue
-        title = item.title.strip() or "无标题"
+        title = item.title.strip() or tr("无标题")
         if item.state == "urgent" and item.deadline is not None:
             title += f"（DDL {deadline_label(item.deadline, moment)}）"
         sections[item.state].extend([f"### {title}", *lines, ""])
         count += 1
-    out = [f"# 周报 {start:%Y-%m-%d} ~ {end:%Y-%m-%d}", ""]
+    out = [tr("# 周报 {start} ~ {end}", start=f"{start:%Y-%m-%d}", end=f"{end:%Y-%m-%d}"), ""]
     if count == 0:
-        out.append("本周暂无记录")
+        out.append(tr("本周暂无记录"))
         return "\n".join(out) + "\n", 0
     for state, label in GROUPS:
         if sections[state]:
-            out.append(f"## {label}")
+            out.append(f"## {tr(label)}")
             out.extend(sections[state])
     return "\n".join(out).rstrip("\n") + "\n", count

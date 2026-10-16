@@ -24,6 +24,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from tasker.i18n import tr
 from tasker.deadline import build_deadline_menu, deadline_label
 from tasker.journal import dump_journal, parse_journal, prepend_record
 from tasker.resources import resource_path
@@ -177,7 +178,7 @@ class DetailWindow(QWidget):
         )
         self.setFont(ui_font(13))
         if parent is None:
-            self.setWindowTitle("详情")
+            self.setWindowTitle(tr("详情"))
             self.setWindowFlags(
                 Qt.WindowType.Tool
                 | Qt.WindowType.WindowTitleHint
@@ -194,8 +195,8 @@ class DetailWindow(QWidget):
         self.status_btn.setIconSize(QSize(8, 8))
         self.status_btn.setFixedHeight(26)
         self.status_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.status_btn.setToolTip("改状态：普通 / 紧急 / 已完成")
-        self.status_btn.setAccessibleDescription("打开菜单选择普通、紧急或已完成")
+        self.status_btn.setToolTip(tr("改状态：普通 / 紧急 / 已完成"))
+        self.status_btn.setAccessibleDescription(tr("打开菜单选择普通、紧急或已完成"))
 
         self._deadline: datetime | None = None
         self.deadline_btn = QToolButton()
@@ -203,8 +204,8 @@ class DetailWindow(QWidget):
         self.deadline_btn.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
         self.deadline_btn.setFixedHeight(26)
         self.deadline_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.deadline_btn.setToolTip("设置截止时间（仅紧急任务）")
-        self.deadline_btn.setAccessibleDescription("打开菜单选择或清除截止时间")
+        self.deadline_btn.setToolTip(tr("设置截止时间（仅紧急任务）"))
+        self.deadline_btn.setAccessibleDescription(tr("打开菜单选择或清除截止时间"))
         self.deadline_btn.setStyleSheet(
             f"QToolButton#deadlinePill{{background:{CARD};color:{INK};"
             f"border:1px solid {LINE_STRONG};border-radius:8px;padding:0 10px;"
@@ -217,8 +218,8 @@ class DetailWindow(QWidget):
 
         self.title_edit = QLineEdit()
         self.title_edit.setObjectName("detailTitle")
-        self.title_edit.setPlaceholderText("标题")
-        self.title_edit.setAccessibleName("任务标题")
+        self.title_edit.setPlaceholderText(tr("标题"))
+        self.title_edit.setAccessibleName(tr("任务标题"))
         self.title_edit.setFrame(False)
         self.title_edit.setMinimumHeight(38)
         self.title_edit.setStyleSheet(
@@ -269,7 +270,7 @@ class DetailWindow(QWidget):
         self.journal_status.setObjectName("journalStatus")
         self.journal_status.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.journal_status.setTextInteractionFlags(Qt.TextInteractionFlag.NoTextInteraction)
-        self.journal_status.setAccessibleName("日志操作状态")
+        self.journal_status.setAccessibleName(tr("日志操作状态"))
         self.journal_status.setStyleSheet(f"color:{MUTED};font-size:12px;")
         footer_row.addWidget(self.journal_dot)
         footer_row.addWidget(self.journal_status, 1)
@@ -352,9 +353,9 @@ class DetailWindow(QWidget):
         self.closed.emit()
 
     def _paint_delete_btn(self) -> None:
-        self.delete_btn.setText("删除")
-        self.delete_btn.setAccessibleName("删除任务")
-        self.delete_btn.setToolTip("删除")
+        self.delete_btn.setText(tr("删除"))
+        self.delete_btn.setAccessibleName(tr("删除任务"))
+        self.delete_btn.setToolTip(tr("删除"))
         self.delete_btn.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
         self.delete_btn.setFixedWidth(32)
         self.delete_btn.setStyleSheet(
@@ -366,7 +367,7 @@ class DetailWindow(QWidget):
         )
 
     def _status_text(self, template: str, **extra) -> str:
-        return template.format(**self._keys, **extra)
+        return tr(template, **self._keys, **extra)
 
     def set_shortcut_keys(self, write: str, save: str) -> None:
         self._keys = {"write": write, "save": save}
@@ -383,10 +384,10 @@ class DetailWindow(QWidget):
         state = self._state
         bg, line = STATE_PILL[state]
         dot = STATE_DOT[state]
-        label = STATE_LABEL[state]
+        label = tr(STATE_LABEL[state])
         self.status_btn.setText(f"{label}  ▾")
         self.status_btn.setIcon(_dot_icon(dot))
-        self.status_btn.setAccessibleName(f"任务状态：{label}")
+        self.status_btn.setAccessibleName(tr("任务状态：{label}", label=label))
         self.status_btn.setStyleSheet(
             f"QToolButton#statusPill{{background:{bg};color:{INK};"
             f"border:1px solid {line};border-radius:13px;padding:0 10px 0 8px;"
@@ -405,12 +406,12 @@ class DetailWindow(QWidget):
             self.deadline_btn.hide()
             return
         if self._deadline is None:
-            text = "设置 DDL  ▾"
-            self.deadline_btn.setAccessibleName("截止时间：未设置")
+            text = tr("设置 DDL  ▾")
+            self.deadline_btn.setAccessibleName(tr("截止时间：未设置"))
         else:
             label = deadline_label(self._deadline)
             text = f"DDL {label}  ▾"
-            self.deadline_btn.setAccessibleName(f"截止时间：{label}")
+            self.deadline_btn.setAccessibleName(tr("截止时间：{label}", label=label))
         self.deadline_btn.setText(text)
         old = self.deadline_btn.menu()
         self.deadline_btn.setMenu(

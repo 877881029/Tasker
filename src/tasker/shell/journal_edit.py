@@ -22,6 +22,7 @@ from PySide6.QtWebEngineCore import QWebEngineSettings
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWidgets import QFrame, QPlainTextEdit, QSizePolicy, QWidget
 
+from tasker.i18n import tr
 from tasker.journal import normalize_breaks
 from tasker.preview.md_visual import TaskerWebPage
 from tasker.theme import COBALT, INK, MUTED, PAPER, UI_FAMILIES, UI_FONT, wrap_document_html
@@ -169,7 +170,7 @@ class JournalDocumentView(QWebEngineView):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setObjectName("journalDocument")
-        self.setAccessibleName("任务日志只读内容")
+        self.setAccessibleName(tr("任务日志只读内容"))
         self.setMinimumSize(0, 0)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         page = TaskerWebPage(self)
@@ -320,11 +321,11 @@ class JournalEditor(QPlainTextEdit):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setObjectName("journalEditor")
-        self.setAccessibleName("任务日志编辑器")
+        self.setAccessibleName(tr("任务日志编辑器"))
         self.setFrameShape(QFrame.Shape.NoFrame)
         self.setLineWrapMode(QPlainTextEdit.LineWrapMode.WidgetWidth)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-        self.setPlaceholderText("记录…")
+        self.setPlaceholderText(tr("记录…"))
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.setStyleSheet(
             f"QPlainTextEdit#journalEditor{{background:{PAPER};color:{INK};border:none;font-size:15px;"

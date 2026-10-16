@@ -6,6 +6,7 @@ from PySide6.QtCore import QEvent, QPoint, Qt
 from PySide6.QtGui import QColor, QGuiApplication, QKeyEvent, QPalette
 from PySide6.QtWidgets import QFrame, QLabel, QLineEdit, QVBoxLayout, QWidget
 
+from tasker.i18n import tr
 from tasker.theme import CARD, COBALT, INK, LINE_STRONG, MUTED, ui_font
 
 HINT = "回车保存 · Esc 取消 · 以 ! 开头设为紧急"
@@ -45,7 +46,7 @@ class QuickCapture(QWidget):
         super().__init__(parent)
         self._on_create = on_create
         self.setObjectName("quickCapture")
-        self.setWindowTitle("快速记录")
+        self.setWindowTitle(tr("快速记录"))
         self.setWindowFlags(
             Qt.WindowType.Tool
             | Qt.WindowType.FramelessWindowHint
@@ -62,8 +63,8 @@ class QuickCapture(QWidget):
         self.edit = CaptureLineEdit(self.submit, self.cancel)
         self.edit.setObjectName("captureEdit")
         self.edit.setFrame(False)
-        self.edit.setPlaceholderText("记一件事…")
-        self.edit.setAccessibleName("快速记录任务标题")
+        self.edit.setPlaceholderText(tr("记一件事…"))
+        self.edit.setAccessibleName(tr("快速记录任务标题"))
         self.edit.setFont(ui_font(16))
         self.edit.setMinimumHeight(36)
         self.edit.setStyleSheet(
@@ -73,7 +74,7 @@ class QuickCapture(QWidget):
         palette = self.edit.palette()
         palette.setColor(QPalette.ColorRole.PlaceholderText, QColor(MUTED))
         self.edit.setPalette(palette)
-        self.hint = QLabel(HINT)
+        self.hint = QLabel(tr(HINT))
         self.hint.setObjectName("captureHint")
         self.hint.setStyleSheet(f"color:{MUTED};font-size:12px;padding:0 4px;")
         inner = QVBoxLayout(self.frame)

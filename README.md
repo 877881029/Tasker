@@ -1,6 +1,6 @@
 # Tasker
 
-**当前版本：1.0.25**　·　[下载 / 更新日志](https://github.com/877881029/Tasker-releases/releases)　·　[CHANGELOG](CHANGELOG.md)
+**当前版本：1.0.26**　·　[下载 / 更新日志](https://github.com/877881029/Tasker-releases/releases)　·　[CHANGELOG](CHANGELOG.md)
 
 Windows 桌面上的轻量任务 + 工作日志。窗口贴在屏幕一侧列出当前任务，点开在左侧写带时间戳的日志；紧急任务可设 DDL 倒计时。数据是本机 Markdown 文件，不联网、不需要账号。
 
@@ -32,7 +32,7 @@ irm https://github.com/877881029/Tasker-releases/releases/latest/download/instal
 | 周报 | 托盘「复制本周周报」或 `Ctrl+Shift+C`，本周日志汇总成 Markdown 复制到剪贴板 |
 | 删除 | 进入 Windows 回收站，5 秒内可撤销（`Ctrl+Z`） |
 | 窗口 | 拖空白处移动，拖边缘缩放，双击铺满；钉住常驻最上层；`Esc` 隐藏到托盘 |
-| 设置 | 右上角齿轮：开关、**自定义全部快捷键**、功能说明、数据目录与备份 |
+| 设置 | 右上角齿轮：开关、**自定义全部快捷键**、**中文 / English 界面**、功能说明、数据目录与备份；支持搜索设置 |
 
 <img src="docs/images/settings.png" alt="设置" width="560">
 
